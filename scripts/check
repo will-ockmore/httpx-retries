@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-eval "$($POETRY_HOME/bin/poetry env activate)"
+source .venv/bin/activate
 ruff check .
 ruff format --check
 mypy .

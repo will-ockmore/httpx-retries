@@ -12,10 +12,6 @@ jobs:
     name: "Python ${{ matrix.python-version }}"
     runs-on: "ubuntu-latest"
 
-    env:
-      POETRY_HOME: "/opt/poetry"
-      POETRY_VERSION: "1.8.5"
-
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
@@ -27,8 +23,14 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           allow-prereleases: true
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "${{ matrix.python-version }}"
+          uv-version: "0.5.22"
+
       - name: "Install dependencies"
-        run: "scripts/install_ci"
+        run: uv sync --all-extras --dev
 
       - name: "Run linting checks"
         run: "scripts/check"
