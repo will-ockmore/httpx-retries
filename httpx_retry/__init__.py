@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 import random
 import sys
 import time
@@ -8,9 +9,11 @@ from email.utils import parsedate_to_datetime
 from enum import Enum
 from functools import partial
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any, Optional, Union, cast
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 if sys.version_info >= (3, 11):
     from http import HTTPMethod
@@ -59,7 +62,8 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
     """
 
-    RETRYABLE_METHODS = frozenset([HTTPMethod.HEAD, HTTPMethod.GET, HTTPMethod.PUT, HTTPMethod.DELETE, HTTPMethod.OPTIONS, HTTPMethod.TRACE])
+    RETRYABLE_METHODS = frozenset(
+        [HTTPMethod.HEAD, HTTPMethod.GET, HTTPMethod.PUT, HTTPMethod.DELETE, HTTPMethod.OPTIONS, HTTPMethod.TRACE])
     RETRYABLE_STATUS_CODES = frozenset(
         [
             HTTPStatus.TOO_MANY_REQUESTS,
@@ -72,13 +76,13 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
     def __init__(
         self,
-        wrapped_transport: httpx.BaseTransport | httpx.AsyncBaseTransport,
+        wrapped_transport: Union[httpx.BaseTransport, httpx.AsyncBaseTransport],
         max_attempts: int = 10,
         max_backoff_wait: float = MAX_BACKOFF_WAIT,
         backoff_factor: float = 0.1,
         respect_retry_after_header: bool = True,
-        retryable_methods: Iterable[HTTPMethod] | None = None,
-        retry_status_codes: Iterable[HTTPStatus] | None = None,
+        retryable_methods: Optional[Iterable[HTTPMethod]] = None,
+        retry_status_codes: Optional[Iterable[HTTPStatus]] = None,
     ) -> None:
         """
         Initializes the instance of RetryTransport class with the given parameters.
@@ -111,7 +115,7 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
         self._backoff_factor = backoff_factor
         self._respect_retry_after_header = respect_retry_after_header
         self._retryable_methods = (
-            frozenset(method.value for method in retryable_methods) if retryable_methods else self.RETRYABLE_METHODS
+            frozenset(HTTPMethod(method) for method in retryable_methods) if retryable_methods else self.RETRYABLE_METHODS
         )
         self._retry_status_codes = frozenset(retry_status_codes) if retry_status_codes else self.RETRYABLE_STATUS_CODES
         self._max_backoff_wait = max_backoff_wait
@@ -174,7 +178,7 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
         transport = cast(httpx.BaseTransport, self._wrapped_transport)
         transport.close()
 
-    def _calculate_sleep(self, attempts_made: int, headers: httpx.Headers | Mapping[str, str]) -> float:
+    def _calculate_sleep(self, attempts_made: int, headers: Union[httpx.Headers, Mapping[str, str]]) -> float:
         # Retry-After
         # The Retry-After response HTTP header indicates how long the user agent should wait before
         # making a follow-up request. There are three main cases this header is used:
@@ -190,14 +194,19 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
                 return float(retry_after_header)
 
             try:
-                parsed_date = parsedate_to_datetime(retry_after_header)
+                try:
+                    parsed_date = parsedate_to_datetime(retry_after_header)
+                except TypeError:
+                    raise ValueError("Retry-After header is not a valid HTTP date")
                 if parsed_date.tzinfo is None:
-                    parsed_date = parsed_date.replace(tzinfo=datetime.UTC)
-                diff = (parsed_date - datetime.datetime.now(datetime.UTC)).total_seconds()
+                    parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
+                diff = (parsed_date - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
                 if diff > 0:
                     return min(diff, self._max_backoff_wait)
             except ValueError:
-                pass
+                # The behaviour for an invalid Retry-After header is the same as if no Retry-After header was present.
+                # A warning is logged to indicate the issue.
+                logger.warning("Retry-After header is not a valid HTTP date: %s", retry_after_header)
 
         # Exponential backoff with full jitter
         backoff: float = self._backoff_factor * (2 ** (attempts_made - 1))

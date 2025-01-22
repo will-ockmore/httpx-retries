@@ -1,7 +1,9 @@
+import sys
 from collections.abc import AsyncGenerator, Callable, Generator
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from http import HTTPStatus
-from typing import TypeAlias
+from typing import Optional, Union
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -11,9 +13,21 @@ from httpx._types import URLTypes
 
 import httpx_retry
 
+if sys.version_info >= (3, 11):
+    from http import HTTPMethod
+else:
+    class HTTPMethod(str, Enum):
+        HEAD = "HEAD"
+        GET = "GET"
+        POST = "POST"
+        PUT = "PUT"
+        DELETE = "DELETE"
+        OPTIONS = "OPTIONS"
+        TRACE = "TRACE"
+
 
 class MockTransport(httpx.BaseTransport):
-    def __init__(self, status_code_map: dict[URLTypes, Generator[tuple[int, str | None], None, None]] | None = None):
+    def __init__(self, status_code_map: dict[URLTypes, Optional[Generator[tuple[int, Union[str, None]], None, None]]] = None):
         self.status_code_map = status_code_map or {}
 
     def handle_request(self, request: Request) -> Response:
@@ -34,7 +48,7 @@ class MockTransport(httpx.BaseTransport):
 
 class MockAsyncTransport(httpx.AsyncBaseTransport):
     def __init__(
-        self, status_code_map: dict[URLTypes, AsyncGenerator[tuple[int, str | None], None]] | None = None
+        self, status_code_map: dict[URLTypes, Optional[AsyncGenerator[tuple[int, Union[str, None]], None]]] = None
     ) -> None:
         self.status_code_map = status_code_map or {}
 
@@ -57,7 +71,7 @@ class MockAsyncTransport(httpx.AsyncBaseTransport):
         )
 
 
-def status_codes(codes: list[tuple[int, str | None]]) -> Generator[tuple[int, str | None], None, None]:
+def status_codes(codes: list[tuple[int, Union[str, None]]]) -> Generator[tuple[int, Union[str, None]], None, None]:
     """
     Yields the given status codes, and then the last status code indefinitely.
     """
@@ -66,7 +80,7 @@ def status_codes(codes: list[tuple[int, str | None]]) -> Generator[tuple[int, st
         yield codes[-1]
 
 
-async def astatus_codes(codes: list[tuple[int, str | None]]) -> AsyncGenerator[tuple[int, str | None], None]:
+async def astatus_codes(codes: list[tuple[int, Union[str, None]]]) -> AsyncGenerator[tuple[int, Union[str, None]], None]:
     """
     Yields the given status codes, and then the last status code indefinitely.
     """
@@ -78,12 +92,12 @@ async def astatus_codes(codes: list[tuple[int, str | None]]) -> AsyncGenerator[t
         yield codes[-1]
 
 
-MockTransportFixtureFunction: TypeAlias = Generator[tuple[Callable[..., MockTransport], MagicMock], None, None]
-MockAsyncTransportFixtureFunction: TypeAlias = Generator[
+MockTransportFixtureFunction= Generator[tuple[Callable[..., MockTransport], MagicMock], None, None]
+MockAsyncTransportFixtureFunction= Generator[
     tuple[Callable[..., MockAsyncTransport], MagicMock], None, None
 ]
-MockTransportFixture: TypeAlias = tuple[Callable[..., MockTransport], MagicMock]
-MockAsyncTransportFixture: TypeAlias = tuple[Callable[..., MockAsyncTransport], MagicMock]
+MockTransportFixture = tuple[Callable[..., MockTransport], MagicMock]
+MockAsyncTransportFixture= tuple[Callable[..., MockAsyncTransport], MagicMock]
 
 
 @pytest.fixture
@@ -92,7 +106,7 @@ def mock_transport(monkeypatch: pytest.MonkeyPatch) -> MockTransportFixtureFunct
     monkeypatch.setattr("time.sleep", mock_sleep)
 
     def _mock_transport(
-        status_code_map: dict[URLTypes, Generator[tuple[int, str | None], None, None]] | None = None,
+        status_code_map: dict[URLTypes, Optional[Generator[tuple[int, Union[str, None]], None, None]]] = None,
     ) -> MockTransport:
         return MockTransport(status_code_map=status_code_map)
 
@@ -105,7 +119,7 @@ def mock_async_transport(monkeypatch: pytest.MonkeyPatch) -> MockAsyncTransportF
     monkeypatch.setattr("asyncio.sleep", mock_sleep)
 
     def _mock_async_transport(
-        status_code_map: dict[URLTypes, AsyncGenerator[tuple[int, str | None], None]] | None = None,
+        status_code_map: dict[URLTypes, Optional[AsyncGenerator[tuple[int, Union[str, None]], None]]] = None,
     ) -> MockAsyncTransport:
         return MockAsyncTransport(status_code_map=status_code_map)
 
@@ -203,6 +217,22 @@ def test_custom_retryable_methods(mock_transport: MockTransportFixture) -> None:
     assert sleep_mock.call_count == 0
 
 
+def test_custom_retryable_methods_str(mock_transport: MockTransportFixture) -> None:
+    # Status code 502 (Bad Gateway) is retryable by default; it won't be retried
+    status_code_map = {
+        "https://example.com/fail": status_codes([(502, None), (200, None)]),
+    }
+    get_transport, sleep_mock = mock_transport
+    transport = httpx_retry.RetryTransport(
+        get_transport(status_code_map=status_code_map), retryable_methods=[HTTPMethod.POST]
+    )
+    with httpx.Client(transport=transport) as client:
+        response = client.get("https://example.com/fail")
+        assert response.status_code == 502
+
+    assert sleep_mock.call_count == 0
+
+
 def test_custom_max_attempts(mock_transport: MockTransportFixture) -> None:
     status_code_map = {
         "https://example.com/fail": status_codes([(502, None)]),
@@ -242,7 +272,7 @@ def test_backoff(mock_transport: MockTransportFixture) -> None:
         assert this_sleep <= 2**attempt * backoff_factor or this_sleep == max_backoff_wait
 
 
-def test_invalid_retry_after(mock_transport: MockTransportFixture) -> None:
+def test_invalid_retry_after(mock_transport: MockTransportFixture, caplog: pytest.LogCaptureFixture) -> None:
     status_code_map = {
         "https://example.com/fail": status_codes([(502, "invalid")]),
     }
@@ -266,6 +296,10 @@ def test_invalid_retry_after(mock_transport: MockTransportFixture) -> None:
 
         # Behaviour should be the same as if no Retry-After header was present
         assert this_sleep <= 2**attempt * backoff_factor or this_sleep == max_backoff_wait
+
+    # We should have raised a warning
+    assert len(caplog.records) == 10
+    assert "Retry-After header is not a valid HTTP date" in caplog.records[0].message
 
 
 def test_retry_after_numeric(mock_transport: MockTransportFixture) -> None:
