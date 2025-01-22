@@ -7,4 +7,4 @@ echo "Installing Poetry $POETRY_VERSION"
 python3 -m venv $POETRY_HOME
 $POETRY_HOME/bin/pip install "poetry==$POETRY_VERSION"
 $POETRY_HOME/bin/poetry --version
-$POETRY_HOME/bin/poetry install --with dev
+$POETRY_HOME/bin/poetry install

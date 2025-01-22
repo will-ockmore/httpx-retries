@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+eval "$(poetry env activate)"
 coverage run -m pytest
 coverage report -m
 coverage html
