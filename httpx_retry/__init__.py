@@ -1,14 +1,28 @@
 import asyncio
 import datetime
 import random
+import sys
 import time
 from collections.abc import Callable, Coroutine, Iterable, Mapping
 from email.utils import parsedate_to_datetime
+from enum import Enum
 from functools import partial
-from http import HTTPMethod, HTTPStatus
+from http import HTTPStatus
 from typing import Any, cast
 
 import httpx
+
+if sys.version_info >= (3, 11):
+    from http import HTTPMethod
+else:
+    class HTTPMethod(str, Enum):
+        HEAD = "HEAD"
+        GET = "GET"
+        POST = "POST"
+        PUT = "PUT"
+        DELETE = "DELETE"
+        OPTIONS = "OPTIONS"
+        TRACE = "TRACE"
 
 
 class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
@@ -45,7 +59,7 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
     """
 
-    RETRYABLE_METHODS = frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"])
+    RETRYABLE_METHODS = frozenset([HTTPMethod.HEAD, HTTPMethod.GET, HTTPMethod.PUT, HTTPMethod.DELETE, HTTPMethod.OPTIONS, HTTPMethod.TRACE])
     RETRYABLE_STATUS_CODES = frozenset(
         [
             HTTPStatus.TOO_MANY_REQUESTS,

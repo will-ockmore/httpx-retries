@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator, Callable, Generator
-from datetime import UTC, datetime, timedelta, timezone
-from http import HTTPMethod, HTTPStatus
+from datetime import datetime, timedelta, timezone
+from http import HTTPStatus
 from typing import TypeAlias
 from unittest.mock import AsyncMock, MagicMock
 
@@ -194,7 +194,7 @@ def test_custom_retryable_methods(mock_transport: MockTransportFixture) -> None:
     }
     get_transport, sleep_mock = mock_transport
     transport = httpx_retry.RetryTransport(
-        get_transport(status_code_map=status_code_map), retryable_methods=[HTTPMethod.POST]
+        get_transport(status_code_map=status_code_map), retryable_methods=["POST"]
     )
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
@@ -317,7 +317,7 @@ def test_retry_after_http_date(mock_transport: MockTransportFixture) -> None:
 
 def test_retry_after_http_date_no_tz(mock_transport: MockTransportFixture) -> None:
     def imf_datetime(s: int) -> str:
-        return (datetime.now(UTC) + timedelta(seconds=s)).strftime("%a, %d %b %Y %H:%M:%S")
+        return (datetime.now(timezone.utc) + timedelta(seconds=s)).strftime("%a, %d %b %Y %H:%M:%S")
 
     status_code_map = {
         "https://example.com/fail": status_codes(
@@ -373,7 +373,7 @@ async def test_async_custom_retryable_methods(mock_async_transport: MockAsyncTra
     get_transport, sleep_mock = mock_async_transport
     transport = httpx_retry.RetryTransport(
         get_transport(status_code_map={"https://example.com/fail": astatus_codes([(429, None)])}),
-        retryable_methods=[HTTPMethod.POST],
+        retryable_methods=["POST"],
     )
 
     async with httpx.AsyncClient(transport=transport) as client:
