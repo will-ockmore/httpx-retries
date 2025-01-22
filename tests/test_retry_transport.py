@@ -9,7 +9,7 @@ import pytest
 from httpx import Request, Response
 from httpx._types import URLTypes
 
-from httpx_retry import retry_transport
+import httpx_retry
 
 
 class MockTransport(httpx.BaseTransport):
@@ -114,7 +114,7 @@ def mock_async_transport(monkeypatch: pytest.MonkeyPatch) -> MockAsyncTransportF
 
 def test_successful_request(mock_transport: MockTransportFixture) -> None:
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(get_transport())
+    transport = httpx_retry.RetryTransport(get_transport())
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com")
 
@@ -124,7 +124,7 @@ def test_successful_request(mock_transport: MockTransportFixture) -> None:
 
 def test_failed_request(mock_transport: MockTransportFixture) -> None:
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map={"https://example.com/fail": status_codes([(429, None)])})
     )
 
@@ -140,7 +140,7 @@ def test_unretryable_status_code(mock_transport: MockTransportFixture) -> None:
         "https://example.com/fail": status_codes([(403, None), (200, None)]),
     }
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(get_transport(status_code_map=status_code_map))
+    transport = httpx_retry.RetryTransport(get_transport(status_code_map=status_code_map))
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
         assert response.status_code == 403
@@ -154,7 +154,7 @@ def test_multiple_failures(mock_transport: MockTransportFixture) -> None:
         "https://example.com/fail2": status_codes([(502, None)]),
     }
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(get_transport(status_code_map=status_code_map))
+    transport = httpx_retry.RetryTransport(get_transport(status_code_map=status_code_map))
     with httpx.Client(transport=transport) as client:
         response1 = client.get("https://example.com/fail1")
         assert response1.status_code == 200
@@ -174,7 +174,7 @@ def test_custom_retryable_status_codes(mock_transport: MockTransportFixture) -> 
         "https://example.com/fail2": status_codes([(502, None), (200, None)]),
     }
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map), retry_status_codes=[HTTPStatus.INTERNAL_SERVER_ERROR]
     )
     with httpx.Client(transport=transport) as client:
@@ -193,7 +193,7 @@ def test_custom_retryable_methods(mock_transport: MockTransportFixture) -> None:
         "https://example.com/fail": status_codes([(502, None), (200, None)]),
     }
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map), retryable_methods=[HTTPMethod.POST]
     )
     with httpx.Client(transport=transport) as client:
@@ -208,7 +208,7 @@ def test_custom_max_attempts(mock_transport: MockTransportFixture) -> None:
         "https://example.com/fail": status_codes([(502, None)]),
     }
     get_transport, sleep_mock = mock_transport
-    transport = retry_transport.RetryTransport(get_transport(status_code_map=status_code_map), max_attempts=5)
+    transport = httpx_retry.RetryTransport(get_transport(status_code_map=status_code_map), max_attempts=5)
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
         assert response.status_code == 502
@@ -224,7 +224,7 @@ def test_backoff(mock_transport: MockTransportFixture) -> None:
     backoff_factor = 2
     max_backoff_wait = 10
 
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map),
         backoff_factor=backoff_factor,
         max_backoff_wait=10,
@@ -251,7 +251,7 @@ def test_invalid_retry_after(mock_transport: MockTransportFixture) -> None:
     backoff_factor = 2
     max_backoff_wait = 10
 
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map),
         backoff_factor=backoff_factor,
         max_backoff_wait=10,
@@ -274,7 +274,7 @@ def test_retry_after_numeric(mock_transport: MockTransportFixture) -> None:
     }
     get_transport, sleep_mock = mock_transport
 
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map),
     )
     with httpx.Client(transport=transport) as client:
@@ -302,7 +302,7 @@ def test_retry_after_http_date(mock_transport: MockTransportFixture) -> None:
     }
     get_transport, sleep_mock = mock_transport
 
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map),
     )
     with httpx.Client(transport=transport) as client:
@@ -330,7 +330,7 @@ def test_retry_after_http_date_no_tz(mock_transport: MockTransportFixture) -> No
     }
     get_transport, sleep_mock = mock_transport
 
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map=status_code_map),
     )
     with httpx.Client(transport=transport) as client:
@@ -346,7 +346,7 @@ def test_retry_after_http_date_no_tz(mock_transport: MockTransportFixture) -> No
 @pytest.mark.asyncio
 async def test_async_successful_request(mock_async_transport: MockAsyncTransportFixture) -> None:
     get_transport, sleep_mock = mock_async_transport
-    transport = retry_transport.RetryTransport(get_transport())
+    transport = httpx_retry.RetryTransport(get_transport())
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com")
@@ -357,7 +357,7 @@ async def test_async_successful_request(mock_async_transport: MockAsyncTransport
 @pytest.mark.asyncio
 async def test_async_failed_request(mock_async_transport: MockAsyncTransportFixture) -> None:
     get_transport, sleep_mock = mock_async_transport
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map={"https://example.com/fail": astatus_codes([(429, None)])})
     )
 
@@ -371,7 +371,7 @@ async def test_async_failed_request(mock_async_transport: MockAsyncTransportFixt
 @pytest.mark.asyncio
 async def test_async_custom_retryable_methods(mock_async_transport: MockAsyncTransportFixture) -> None:
     get_transport, sleep_mock = mock_async_transport
-    transport = retry_transport.RetryTransport(
+    transport = httpx_retry.RetryTransport(
         get_transport(status_code_map={"https://example.com/fail": astatus_codes([(429, None)])}),
         retryable_methods=[HTTPMethod.POST],
     )

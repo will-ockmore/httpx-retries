@@ -1,0 +1,43 @@
+---
+name: Test Suite
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master", "version-*"]
+
+jobs:
+  tests:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-latest"
+
+    env:
+      POETRY_HOME: "/opt/poetry"
+
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "${{ matrix.python-version }}"
+          allow-prereleases: true
+
+      - name: "Install dependencies"
+        run: |
+          python3 -m venv $POETRY_HOME
+          $POETRY_HOME/bin/pip install poetry==2.0.0
+          $POETRY_HOME/bin/poetry --version
+          $POETRY_HOME/bin/poetry install
+
+      - name: "Run linting checks"
+        run: "scripts/check"
+
+      - name: "Run tests"
+        run: "scripts/test"
+
+      - name: "Build package & docs"
+        run: "scripts/build"
