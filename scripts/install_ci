@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 
 python3 -m venv $POETRY_HOME
-$POETRY_HOME/bin/pip install poetry==2.0.0
+$POETRY_HOME/bin/pip install poetry==$POETRY_VERSION
 $POETRY_HOME/bin/poetry --version
 $POETRY_HOME/bin/poetry install
