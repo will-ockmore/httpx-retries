@@ -28,11 +28,7 @@ jobs:
           allow-prereleases: true
 
       - name: "Install dependencies"
-        run: |
-          python3 -m venv $POETRY_HOME
-          $POETRY_HOME/bin/pip install poetry==2.0.0
-          $POETRY_HOME/bin/poetry --version
-          $POETRY_HOME/bin/poetry install
+        run: "scripts/install_ci"
 
       - name: "Run linting checks"
         run: "scripts/check"
