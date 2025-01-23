@@ -1,2 +1,5 @@
-::: httpx_retry.RetryTransport
-handler: python
+::: httpx_retries
+    options:
+        members:
+            - RetryTransport
+            - Retry

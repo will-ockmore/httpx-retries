@@ -1,2 +1,3 @@
-# httpx-retry
-Intelligently retry requests with httpx
+# httpx-retries
+
+Intelligently retry requests with httpx.

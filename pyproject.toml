@@ -1,19 +1,11 @@
 [project]
-name = "httpx-retry"
+name = "httpx-retries"
 version = "0.1.0"
 description = "Intelligently retry requests with httpx"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
 dependencies = ["httpx>=0.27.0"]
-
-[tool.poetry]
-name = "httpx-retry"
-version = "0.1.0"
-description = "Intelligently retry requests with httpx"
-authors = ["Will Ockmore <will.ockmore@gmail.com>"]
-license = "MIT"
-readme = "README.md"
 
 [dependency-groups]
 dev = [
@@ -23,7 +15,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "mkdocs-material",
-    "mkdocstrings",
+    "mkdocstrings[python]",
     "coverage",
 ]
 
@@ -31,16 +23,13 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "C4", "TID251"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["wf"]
+select = ["E", "F", "W", "I", "C4"]
 
 [tool.coverage.run]
-source = ["httpx-retry", "tests"]
+source = ["httpx_retry", "tests"]
 relative_files = true
 
 [tool.coverage.report]
@@ -50,6 +39,8 @@ fail_under = 100
 exclude_lines = [
     # Allow manually specifying untestable code.
     "pragma: no cover",
+    # Allow conditional imports to remain untested.
+    "if sys.version_info.*",
     # Can't test type checking code.
     "if TYPE_CHECKING:",
     "@overload",

@@ -23,4 +23,7 @@ theme:
 
 plugins:
   - search
-  - mkdocstrings
+  - mkdocstrings:
+      options:
+        filters:
+          - "!^_"

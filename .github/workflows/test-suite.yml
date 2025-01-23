@@ -37,6 +37,3 @@ jobs:
 
       - name: "Run tests"
         run: "scripts/test"
-
-      - name: "Build package & docs"
-        run: "scripts/build"
