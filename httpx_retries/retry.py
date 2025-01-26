@@ -39,29 +39,19 @@ class Retry:
 
     For complex use cases, you can override the `backoff_strategy` method.
 
-    ```python
-    class CustomRetry(Retry):
-        def backoff_strategy(self) -> float:
-            # Custom backoff logic here
-            if self.attempts_made == 3:
-                return 1.0
-
-            return super().backoff_strategy()
-    ```
-
     Args:
-        total (int, optional): The maximum number of times to retry a request before giving up. Defaults to 10.
-        max_backoff_wait (float, optional): The maximum time to wait between retries in seconds. Defaults to 120.
+        total (int, optional): The maximum number of times to retry a request before giving up.
+        max_backoff_wait (float, optional): The maximum time in seconds to wait between retries.
         backoff_factor (float, optional): The factor by which the wait time increases with each retry attempt.
-            Defaults to 0.
         respect_retry_after_header (bool, optional): Whether to respect the Retry-After header in HTTP responses
-            when deciding how long to wait before retrying. Defaults to True.
+            when deciding how long to wait before retrying.
         allowed_methods (Iterable[http.HTTPMethod, str], optional): The HTTP methods that can be retried. Defaults to
             ["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"].
         status_forcelist (Iterable[http.HTTPStatus, int], optional): The HTTP status codes that can be retried.
             Defaults to [429, 502, 503, 504].
-        backoff_jitter (float, optional): The amount of jitter to add to the backoff time. Defaults to 1 (full jitter).
-        attempts_made (int, optional): The number of attempts already made. Defaults to 0.
+        backoff_jitter (float, optional): The amount of jitter to add to the backoff time, between 0 and 1.
+            Defaults to 1 (full jitter).
+        attempts_made (int, optional): The number of attempts already made.
     """
 
     RETRYABLE_METHODS: Final[frozenset[HTTPMethod]] = frozenset(
@@ -75,20 +65,16 @@ class Retry:
             HTTPStatus.GATEWAY_TIMEOUT,
         ]
     )
-    DEFAULT_MAX_BACKOFF_WAIT: Final[float] = 120.0
-    DEFAULT_TOTAL_RETRIES: Final[int] = 10
-    DEFAULT_BACKOFF_FACTOR: Final[float] = 0.0
-    DEFAULT_BACKOFF_JITTER: Final[float] = 1.0
 
     def __init__(
         self,
-        total: int = DEFAULT_TOTAL_RETRIES,
+        total: int = 10,
         allowed_methods: Optional[Iterable[Union[HTTPMethod, str]]] = None,
         status_forcelist: Optional[Iterable[Union[HTTPStatus, int]]] = None,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+        backoff_factor: float = 0.0,
         respect_retry_after_header: bool = True,
-        max_backoff_wait: float = DEFAULT_MAX_BACKOFF_WAIT,
-        backoff_jitter: float = DEFAULT_BACKOFF_JITTER,
+        max_backoff_wait: float = 120.0,
+        backoff_jitter: float = 1.0,
         attempts_made: int = 0,
     ) -> None:
         """Initialize a new Retry instance."""
@@ -172,6 +158,17 @@ class Retry:
     def backoff_strategy(self) -> float:
         """
         Calculate the backoff time based on the number of attempts.
+
+        For complex use cases, you can override this method to implement a custom backoff strategy.
+
+        ```python
+        class CustomRetry(Retry):
+            def backoff_strategy(self) -> float:
+                if self.attempts_made == 3:
+                    return 1.0
+
+                return super().backoff_strategy()
+        ```
 
         Returns:
             The calculated backoff time in seconds, capped by max_backoff_wait.

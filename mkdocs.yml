@@ -24,9 +24,6 @@ theme:
 plugins:
   - search
   - mkdocstrings:
-      options:
-        filters:
-          - "!^_"
 
 markdown_extensions:
   - admonition
