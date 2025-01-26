@@ -2,20 +2,19 @@
 
 set -euo pipefail
 
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    git config --local user.name "GitHub Action"
 
-if [ ! -z "$GITHUB_ACTIONS" ]; then
-  git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-  git config --local user.name "GitHub Action"
+    VERSION="$(uvx hatch version)"
 
-  VERSION="$(uvx hatch version)"
-
-  if [ "refs/tags/${VERSION}" != "${GITHUB_REF}" ] ; then
-    echo "GitHub Ref '${GITHUB_REF}' did not match package version '${VERSION}'"
-    exit 1
-  fi
+    if [ "refs/tags/${VERSION}" != "${GITHUB_REF}" ] ; then
+        echo "The tag ${VERSION} does not match the GitHub ref ${GITHUB_REF}"
+        exit 1
+    fi
 fi
-
-set -x
 
 uv publish
 uv run mkdocs gh-deploy --force
+
+echo "Done! 🎉"
