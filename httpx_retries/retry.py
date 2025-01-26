@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
-from typing import Final, Optional, Union, cast
+from typing import Final, Optional, Union
 
 import httpx
 
@@ -134,7 +134,7 @@ class Retry:
         This functions identically to urllib3's `Retry.is_retry` method.
         """
         return (
-            self.max_attempts
+            self.max_attempts > 0
             and self.is_retryable_method(method)
             and self.is_retryable_status_code(status_code)
             and not has_retry_after
@@ -182,7 +182,7 @@ class Retry:
             return 0.0
 
         # Calculate exponential backoff
-        backoff = self.backoff_factor * (2**self.attempts_made)
+        backoff: float = self.backoff_factor * (2**self.attempts_made)
 
         # Apply jitter if configured
         if self.backoff_jitter > 0:

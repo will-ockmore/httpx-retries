@@ -35,7 +35,7 @@ class RetryTransport(httpx.HTTPTransport):
     def __init__(
         self,
         retry: Optional[Retry] = None,
-        **kwargs,
+        **kwargs: Any,  # HTTPTransport doesn't expose its kwargs type
     ) -> None:
         """
         Initializes a [RetryTransport][httpx_retries.RetryTransport] instance.
@@ -111,7 +111,7 @@ class AsyncRetryTransport(httpx.AsyncHTTPTransport):
     def __init__(
         self,
         retry: Optional[Retry] = None,
-        **kwargs,
+        **kwargs: Any,  # AsyncHTTPTransport doesn't expose its kwargs type
     ) -> None:
         """
         Initializes an [AsyncRetryTransport][httpx_retries.AsyncRetryTransport] instance.

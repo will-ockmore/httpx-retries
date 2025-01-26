@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator, Generator
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import httpx
@@ -37,18 +37,26 @@ def create_response(request: Request, status_code: int, retry_after: Optional[st
     return Response(status_code=status_code, request=request, headers=headers)
 
 
+# Type aliases for status code sequences and mock transport tuples
+StatusCodeTuple = tuple[int, Union[str, None]]
+StatusCodeSequence = Generator[StatusCodeTuple, None, None]
+AsyncStatusCodeSequence = AsyncGenerator[StatusCodeTuple, None]
+MockTransport = tuple[MagicMock, Dict[str, Optional[StatusCodeSequence]]]
+AsyncMockTransport = tuple[AsyncMock, Dict[str, Optional[AsyncStatusCodeSequence]]]
+
+
 @pytest.fixture
-def mock_transport(mock_sleep: MagicMock) -> Generator[tuple[MagicMock, dict], None, None]:
+def mock_transport(mock_sleep: MagicMock) -> Generator[MockTransport, None, None]:
     """
     Returns a mock for sleep and a dict to store status code sequences.
     The mock will return responses based on the status_code_sequences.
     """
-    status_code_sequences = {}
+    status_code_sequences: Dict[str, Optional[StatusCodeSequence]] = {}
 
     def handle_request(request: Request) -> Response:
         # Get the generator for the URL if it exists
         if request.url in status_code_sequences:
-            status_code_gen = status_code_sequences[request.url]
+            status_code_gen = status_code_sequences[str(request.url)]
             if status_code_gen is not None:
                 status_code, retry_after = next(status_code_gen)
                 return create_response(request, status_code, retry_after)
@@ -61,17 +69,17 @@ def mock_transport(mock_sleep: MagicMock) -> Generator[tuple[MagicMock, dict], N
 
 
 @pytest.fixture
-def mock_async_transport(mock_asleep: AsyncMock) -> Generator[tuple[AsyncMock, dict], None, None]:
+def mock_async_transport(mock_asleep: AsyncMock) -> Generator[AsyncMockTransport, None, None]:
     """
     Returns a mock for async sleep and a dict to store status code sequences.
     The mock will return responses based on the status_code_sequences.
     """
-    status_code_sequences = {}
+    status_code_sequences: Dict[str, Optional[AsyncStatusCodeSequence]] = {}
 
     async def handle_async_request(request: Request) -> Response:
         # Get the generator for the URL if it exists
         if request.url in status_code_sequences:
-            status_code_gen = status_code_sequences[request.url]
+            status_code_gen = status_code_sequences[str(request.url)]
             if status_code_gen is not None:
                 status_code, retry_after = await status_code_gen.__anext__()
                 return create_response(request, status_code, retry_after)
@@ -83,7 +91,7 @@ def mock_async_transport(mock_asleep: AsyncMock) -> Generator[tuple[AsyncMock, d
         yield mock_asleep, status_code_sequences
 
 
-def test_successful_request(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_successful_request(mock_transport: MockTransport) -> None:
     mock_sleep, _ = mock_transport
     transport = httpx_retries.RetryTransport()
 
@@ -94,7 +102,7 @@ def test_successful_request(mock_transport: tuple[MagicMock, dict]) -> None:
     assert mock_sleep.call_count == 0
 
 
-def test_failed_request(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_failed_request(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None)])
     transport = httpx_retries.RetryTransport()
@@ -106,7 +114,7 @@ def test_failed_request(mock_transport: tuple[MagicMock, dict]) -> None:
     assert mock_sleep.call_count == 10
 
 
-def test_unretryable_status_code(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_unretryable_status_code(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(403, None), (200, None)])
     transport = httpx_retries.RetryTransport()
@@ -118,7 +126,7 @@ def test_unretryable_status_code(mock_transport: tuple[MagicMock, dict]) -> None
     assert mock_sleep.call_count == 0
 
 
-def test_unretryable_method(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_unretryable_method(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None), (200, None)])
     transport = httpx_retries.RetryTransport()
@@ -130,7 +138,7 @@ def test_unretryable_method(mock_transport: tuple[MagicMock, dict]) -> None:
     assert mock_sleep.call_count == 0
 
 
-def test_retries_reset_for_new_request(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_retries_reset_for_new_request(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None)])
     status_code_sequences["https://example.com/fail2"] = status_codes([(429, None)])
@@ -146,7 +154,7 @@ def test_retries_reset_for_new_request(mock_transport: tuple[MagicMock, dict]) -
     assert mock_sleep.call_count == 20
 
 
-def test_retry_respects_retry_after_header(mock_transport: tuple[MagicMock, dict]) -> None:
+def test_retry_respects_retry_after_header(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, "5")])
     transport = httpx_retries.RetryTransport()
@@ -160,7 +168,7 @@ def test_retry_respects_retry_after_header(mock_transport: tuple[MagicMock, dict
 
 
 @pytest.mark.asyncio
-async def test_async_successful_request(mock_async_transport: tuple[AsyncMock, dict]) -> None:
+async def test_async_successful_request(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     transport = httpx_retries.AsyncRetryTransport()
 
@@ -172,7 +180,7 @@ async def test_async_successful_request(mock_async_transport: tuple[AsyncMock, d
 
 
 @pytest.mark.asyncio
-async def test_async_failed_request(mock_async_transport: tuple[AsyncMock, dict]) -> None:
+async def test_async_failed_request(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
     transport = httpx_retries.AsyncRetryTransport()
@@ -185,7 +193,7 @@ async def test_async_failed_request(mock_async_transport: tuple[AsyncMock, dict]
 
 
 @pytest.mark.asyncio
-async def test_async_unretryable_method(mock_async_transport: tuple[AsyncMock, dict]) -> None:
+async def test_async_unretryable_method(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
     transport = httpx_retries.AsyncRetryTransport()
@@ -198,7 +206,7 @@ async def test_async_unretryable_method(mock_async_transport: tuple[AsyncMock, d
 
 
 @pytest.mark.asyncio
-async def test_retries_reset_for_new_request_async(mock_async_transport: tuple[AsyncMock, dict]) -> None:
+async def test_retries_reset_for_new_request_async(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
     status_code_sequences["https://example.com/fail2"] = astatus_codes([(429, None)])
@@ -215,7 +223,7 @@ async def test_retries_reset_for_new_request_async(mock_async_transport: tuple[A
 
 
 @pytest.mark.asyncio
-async def test_retry_respects_retry_after_header_async(mock_async_transport: tuple[AsyncMock, dict]) -> None:
+async def test_retry_respects_retry_after_header_async(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, "5")])
     transport = httpx_retries.AsyncRetryTransport()
