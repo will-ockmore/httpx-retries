@@ -1,0 +1,34 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  publish:
+    name: "Publish release"
+    runs-on: "ubuntu-latest"
+
+    environment:
+      name: deploy
+
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: 3.9
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: 3.9
+          uv-version: "0.5.22"
+
+      - name: "Build package & docs"
+        run: "scripts/build"
+
+      - name: "Publish to PyPI & deploy docs"
+        run: "scripts/publish"
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}

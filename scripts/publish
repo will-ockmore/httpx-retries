@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+
+if [ ! -z "$GITHUB_ACTIONS" ]; then
+  git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  git config --local user.name "GitHub Action"
+
+  VERSION="$(uvx hatch version)"
+
+  if [ "refs/tags/${VERSION}" != "${GITHUB_REF}" ] ; then
+    echo "GitHub Ref '${GITHUB_REF}' did not match package version '${VERSION}'"
+    exit 1
+  fi
+fi
+
+set -x
+
+uv publish
+uv run mkdocs gh-deploy --force
