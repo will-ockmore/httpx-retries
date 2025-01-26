@@ -11,29 +11,32 @@
 <!-- </a> -->
 </p>
 
-<em>A modern retry layer for HTTPX.</em>
+<em>A retry layer for HTTPX.</em>
 
 
 ---
 
-HTTPX Retries is a complete implementation of request retry policies for HTTPX.
+HTTPX Retries is a full implementation of request retry policies for HTTPX.
 
-It's very common to deal with *flaky* and *unreliable* APIs. When requests fail, applications need the
-ability to resend them.
+It's very common to deal with **flaky** and **unreliable** APIs. When requests fail, applications need to be able
+to resend them.
 
 ---
 
 Install HTTPX Retries using pip:
 
-```
+``` bash
 pip install httpx-retries
 ```
 
 ---
 
-To get started, define your retry strategy and add your transport to your client.
+To get started, define your retry strategy and add the transport to your client.
 
 ``` python
+import httpx
+from httpx_retries import Retry, RetryTransport
+
 retry = Retry(total=5, backoff_factor=0.5, respect_retry_after_header=False)
 transport = RetryTransport(retry=retry)
 
@@ -41,22 +44,34 @@ with httpx.Client(transport=transport) as client:
     response = client.get("https://example.com")
 ```
 
+## Features
 
-This package includes a custom transport ([RetryTransport][httpx_retries.RetryTransport]) and a retry utility ([Retry][httpx_retries.Retry]), which will be familiar to users of
-[urllib3's Retry](https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.Retry).
+HTTPX Retries builds on the patterns users will expect from `urllib` and `requests`. The typical approach has been
+to use [urllib3's Retry](https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.Retry)
+utility to configure a retry policy. For example, with [requests](https://requests.readthedocs.io/en/latest/) the above
+code becomes
 
+``` python
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
+retry = Retry(total=5, backoff_factor=0.5)
+adapter = HTTPAdapter(max_retries=retry)
 
-## Commands
+with requests.Session() as session:
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    response = session.get("https://example.com")
+```
 
-- `mkdocs new [dir-name]` - Create a new project.
-- `mkdocs serve` - Start the live-reloading docs server.
-- `mkdocs build` - Build the documentation site.
-- `mkdocs -h` - Print help message and exit.
+To reduce boilerplate, this package includes custom transports
+ ([RetryTransport][httpx_retries.RetryTransport] and [AsyncRetryTransport][httpx_retries.AsyncRetryTransport]), so
+you don't have to to explicitly define policies for simple use cases.
 
-## Project layout
+As HTTPX adds support for asynchronous requests, the package exposes a new retry
+utility ([Retry][httpx_retries.Retry]). To make it easy to migrate, the API surface is almost identical, with a few main
+differences:
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+- `total` is the only parameter used to configure the number of retries.
+- [asleep][httpx_retries.Retry.asleep] is an async implementation of [sleep][httpx_retries.Retry.sleep].
+- [backoff_strategy][httpx_retries.Retry.backoff_strategy] can be overridden to customize backoff behavior.

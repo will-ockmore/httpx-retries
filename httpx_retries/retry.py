@@ -127,6 +127,19 @@ class Retry:
         """Check if a status code is retryable."""
         return HTTPStatus(status_code) in self.retry_status_codes
 
+    def is_retry(self, method: str, status_code: int, has_retry_after: bool) -> bool:
+        """
+        Check if a method and status code are retryable.
+
+        This functions identically to urllib3's `Retry.is_retry` method.
+        """
+        return (
+            self.max_attempts
+            and self.is_retryable_method(method)
+            and self.is_retryable_status_code(status_code)
+            and not has_retry_after
+        )
+
     def is_exhausted(self) -> bool:
         """Check if the retry attempts have been exhausted."""
         return self.attempts_made >= self.max_attempts
