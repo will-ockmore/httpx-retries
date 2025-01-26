@@ -1,5 +1,10 @@
 name: Publish
 
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
 on:
   push:
     tags:
