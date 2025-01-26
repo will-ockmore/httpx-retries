@@ -98,7 +98,7 @@ def mock_transport(mock_sleep: MagicMock) -> MockTransportFixtureFunction:
 
 
 @pytest.fixture
-def mock_async_transport(mock_asleep: MagicMock) -> MockAsyncTransportFixtureFunction:
+def mock_async_transport(mock_asleep: AsyncMock) -> MockAsyncTransportFixtureFunction:
     def _mock_async_transport(
         status_code_map: Optional[dict[URLTypes, Optional[AsyncGenerator[tuple[int, Union[str, None]], None]]]] = None,
     ) -> MockAsyncTransport:
@@ -109,10 +109,7 @@ def mock_async_transport(mock_asleep: MagicMock) -> MockAsyncTransportFixtureFun
 
 def test_successful_request(mock_transport: MockTransportFixture) -> None:
     get_transport, sleep_mock = mock_transport
-    status_code_map = {
-        "https://example.com": status_codes([(200, None)]),
-    }
-    transport = httpx_retries.RetryTransport(wrapped_transport=get_transport(status_code_map=status_code_map))
+    transport = httpx_retries.RetryTransport(wrapped_transport=get_transport())
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com")
 

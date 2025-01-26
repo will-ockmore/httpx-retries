@@ -26,8 +26,8 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
     Args:
         retry (Retry, optional): The retry configuration. Defaults to Retry().
-        wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional): The underlying HTTP transport
-            to wrap and use for making requests.
+        wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional):
+            The underlying HTTP transport to wrap and use for making requests.
 
     Attributes:
         retry (Retry): The retry configuration.

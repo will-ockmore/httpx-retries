@@ -1,5 +1,6 @@
 import datetime
 from http import HTTPStatus
+from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,7 +9,7 @@ from httpx import Headers, Response
 from httpx_retries.retry import HTTPMethod, Retry
 
 
-def test_retry_initialization():
+def test_retry_initialization() -> None:
     retry = Retry()
     assert retry.max_attempts == 10
     assert retry.backoff_factor == 0
@@ -16,7 +17,7 @@ def test_retry_initialization():
     assert retry.max_backoff_wait == 120
 
 
-def test_retry_custom_initialization():
+def test_retry_custom_initialization() -> None:
     retry = Retry(
         total=5,
         backoff_factor=0.5,
@@ -35,43 +36,43 @@ def test_retry_custom_initialization():
     assert HTTPStatus.BAD_GATEWAY in retry.retry_status_codes
 
 
-def test_is_retryable_method():
+def test_is_retryable_method() -> None:
     retry = Retry()
     assert retry.is_retryable_method("GET") is True
     assert retry.is_retryable_method("POST") is False
 
 
-def test_is_retryable_status_code():
+def test_is_retryable_status_code() -> None:
     retry = Retry()
     assert retry.is_retryable_status_code(429) is True
     assert retry.is_retryable_status_code(404) is False
 
 
-def test_custom_retryable_methods_str():
+def test_custom_retryable_methods_str() -> None:
     retry = Retry(allowed_methods=["POST"])
     assert retry.is_retryable_method("POST") is True
     assert retry.is_retryable_method("GET") is False
 
 
-def test_custom_retryable_methods_enum():
+def test_custom_retryable_methods_enum() -> None:
     retry = Retry(allowed_methods=[HTTPMethod.POST])
     assert retry.is_retryable_method("POST") is True
     assert retry.is_retryable_method("GET") is False
 
 
-def test_custom_retry_status_codes():
+def test_custom_retry_status_codes() -> None:
     retry = Retry(status_forcelist=[500])
     assert retry.is_retryable_status_code(500) is True
     assert retry.is_retryable_status_code(502) is False
 
 
-def test_custom_retry_status_codes_enum():
+def test_custom_retry_status_codes_enum() -> None:
     retry = Retry(status_forcelist=[HTTPStatus.INTERNAL_SERVER_ERROR])
     assert retry.is_retryable_status_code(500) is True
     assert retry.is_retryable_status_code(502) is False
 
 
-def test_is_exhausted():
+def test_is_exhausted() -> None:
     retry = Retry(total=3)
     assert retry.is_exhausted() is False
 
@@ -79,12 +80,12 @@ def test_is_exhausted():
     assert retry.is_exhausted() is True
 
 
-def test_parse_retry_after_seconds():
+def test_parse_retry_after_seconds() -> None:
     retry = Retry()
     assert retry.parse_retry_after("5") == 5.0
 
 
-def test_parse_retry_after_http_date():
+def test_parse_retry_after_http_date() -> None:
     retry = Retry()
     future_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=5)).strftime(
         "%a, %d %b %Y %H:%M:%S GMT"
@@ -93,7 +94,7 @@ def test_parse_retry_after_http_date():
     assert 3 < result < 7  # Allow some flexibility for test execution time
 
 
-def test_parse_retry_after_http_date_past():
+def test_parse_retry_after_http_date_past() -> None:
     retry = Retry()
     past_date = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5)).strftime(
         "%a, %d %b %Y %H:%M:%S GMT"
@@ -102,7 +103,7 @@ def test_parse_retry_after_http_date_past():
     assert result == 0
 
 
-def test_parse_retry_after_http_date_no_tz():
+def test_parse_retry_after_http_date_no_tz() -> None:
     retry = Retry()
     future_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=5)).strftime(
         "%a, %d %b %Y %H:%M:%S"
@@ -111,32 +112,32 @@ def test_parse_retry_after_http_date_no_tz():
     assert 3 < result < 7
 
 
-def test_calculate_sleep_with_retry_after_over_max():
+def test_calculate_sleep_with_retry_after_over_max() -> None:
     retry = Retry(max_backoff_wait=5)
     headers = Headers({"Retry-After": "10"})
     assert retry._calculate_sleep(headers) == 5.0
 
 
-def test_calculate_sleep_respect_retry_after_false():
+def test_calculate_sleep_respect_retry_after_false() -> None:
     retry = Retry(respect_retry_after_header=False)
     headers = Headers({"Retry-After": "5"})
     sleep_time = retry._calculate_sleep(headers)
     assert sleep_time <= retry.max_backoff_wait
 
 
-def test_parse_retry_after_invalid():
+def test_parse_retry_after_invalid() -> None:
     retry = Retry()
     with pytest.raises(ValueError):
         retry.parse_retry_after("invalid")
 
 
-def test_calculate_sleep_with_retry_after():
+def test_calculate_sleep_with_retry_after() -> None:
     retry = Retry()
     headers = Headers({"Retry-After": "5"})
     assert retry._calculate_sleep(headers) == 5.0
 
 
-def test_calculate_sleep_with_invalid_retry_after(caplog):
+def test_calculate_sleep_with_invalid_retry_after(caplog: pytest.LogCaptureFixture) -> None:
     retry = Retry()
     headers = Headers({"Retry-After": "invalid"})
     sleep_time = retry._calculate_sleep(headers)
@@ -145,13 +146,13 @@ def test_calculate_sleep_with_invalid_retry_after(caplog):
     assert "Retry-After header is not a valid HTTP date" in caplog.text
 
 
-def test_calculate_sleep_returns_immediately_on_first_attempt():
+def test_calculate_sleep_returns_immediately_on_first_attempt() -> None:
     retry = Retry()
     headers = Headers({})
     assert retry._calculate_sleep(headers) == 0
 
 
-def test_sleep_respects_retry_after_header(mock_sleep: MagicMock):
+def test_sleep_respects_retry_after_header(mock_sleep: MagicMock) -> None:
     retry = Retry()
     response = Response(status_code=429, headers={"Retry-After": "5"})
     retry.sleep(response)
@@ -160,7 +161,7 @@ def test_sleep_respects_retry_after_header(mock_sleep: MagicMock):
 
 
 @pytest.mark.asyncio
-async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock):
+async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock) -> None:
     retry = Retry()
     response = Response(status_code=429, headers={"Retry-After": "5"})
     await retry.asleep(response)
@@ -168,17 +169,17 @@ async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock):
     mock_asleep.assert_called_with(5.0)
 
 
-def test_calculate_sleep_returns_immediately_by_default():
+def test_calculate_sleep_returns_immediately_by_default() -> None:
     # If there is no backoff factor or retry after header, the sleep time should be 0
     retry = Retry(attempts_made=1)
     headers = Headers({})
     assert retry._calculate_sleep(headers) == 0
 
 
-def test_calculate_sleep_with_backoff():
+def test_calculate_sleep_with_backoff() -> None:
     retry = Retry(backoff_factor=2)
     headers = Headers({})
-    attempts = [retry]
+    attempts: List[Retry] = [retry]
     for _ in range(3):
         attempts.append(attempts[-1].increment())
 
@@ -190,7 +191,7 @@ def test_calculate_sleep_with_backoff():
         assert sleep_time <= max_expected
 
 
-def test_calculate_sleep_max_backoff():
+def test_calculate_sleep_max_backoff() -> None:
     retry = Retry(backoff_factor=2, max_backoff_wait=5)
     headers = Headers({})
     # After several attempts, backoff would exceed max_backoff_wait
@@ -199,7 +200,7 @@ def test_calculate_sleep_max_backoff():
     assert sleep_time <= 5
 
 
-def test_calculate_sleep_first_attempt():
+def test_calculate_sleep_first_attempt() -> None:
     retry = Retry(backoff_factor=2)
     headers = Headers({})
     sleep_time = retry._calculate_sleep(headers)
@@ -207,7 +208,7 @@ def test_calculate_sleep_first_attempt():
     assert sleep_time <= 2
 
 
-def test_calculate_sleep_without_retry_after():
+def test_calculate_sleep_without_retry_after() -> None:
     retry = Retry()
     headers = Headers({})
     sleep_time = retry._calculate_sleep(headers)
@@ -215,7 +216,7 @@ def test_calculate_sleep_without_retry_after():
     assert sleep_time <= retry.max_backoff_wait
 
 
-def test_increment():
+def test_increment() -> None:
     retry = Retry(total=3)
     new_retry = retry.increment()
 

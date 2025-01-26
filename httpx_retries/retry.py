@@ -168,7 +168,7 @@ class Retry:
         If `backoff_factor` is set, it will use an exponential backoff with configurable jitter;
         otherwise, it will return 0 (no backoff).
         """
-        backoff = self.backoff_factor * (2 ** (self.attempts_made))
+        backoff: float = self.backoff_factor * (2 ** (self.attempts_made))
         if self.backoff_jitter:
             backoff = backoff * random.uniform(0, self.backoff_jitter)
         return min(backoff, self.max_backoff_wait)
