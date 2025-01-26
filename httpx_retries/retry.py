@@ -28,7 +28,6 @@ else:  # pragma: no cover
         TRACE = "TRACE"
 
 
-
 class Retry:
     """
     A class to encapsulate retry logic and configuration.
