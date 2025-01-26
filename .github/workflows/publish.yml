@@ -1,9 +1,9 @@
 name: Publish
 
 permissions:
-  contents: read
-  id-token: write
+  contents: write
   pages: write
+  id-token: write
 
 on:
   push:

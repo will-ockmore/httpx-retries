@@ -15,7 +15,7 @@
 
 ---
 
-HTTPX Retries is a full implementation of request retry policies for HTTPX.
+HTTPX Retries implements request retry for [HTTPX](https://www.python-httpx.org/).
 
 It's very common to deal with **flaky** and **unreliable** APIs. When requests fail, your program needs to be able
 to retry them.
@@ -60,7 +60,7 @@ with httpx.Client(transport=transport) as client:
 
 ## Features
 
-HTTPX Retries builds on the patterns users will expect from `urllib` and `requests`. The typical approach has been
+HTTPX Retries builds on the patterns users expect from `urllib` and `requests`. The typical approach has been
 to use [urllib3's Retry](https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.Retry)
 utility to configure a retry policy. The equivalent code to match the above example using
 [requests](https://requests.readthedocs.io/en/latest/) is:
