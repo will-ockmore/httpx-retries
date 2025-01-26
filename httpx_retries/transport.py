@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import httpx
 
@@ -10,7 +10,7 @@ from .retry import Retry as Retry
 logger = logging.getLogger(__name__)
 
 
-class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
+class RetryTransport(httpx.HTTPTransport):
     """
     A custom HTTP transport that automatically retries requests using the given retry configuration.
 
@@ -24,33 +24,18 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
         response = client.get("https://example.com")
     ```
 
-    This transport can be used with both sync and async clients.
-
-    ```python
-    with httpx.AsyncClient(transport=RetryTransport()) as client:
-        response = await client.get("https://example.com")
-    ```
-
     Args:
         retry (Retry, optional): The retry configuration.
-        wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional):
-            The underlying HTTP transport to wrap and use for making requests.
+        **kwargs: Additional arguments passed to httpx.HTTPTransport.
 
     Attributes:
         retry (Retry): The retry configuration.
-        _wrapped_transport (httpx.BaseTransport, optional): The underlying HTTP transport.
-        _async_wrapped_transport (httpx.AsyncBaseTransport, optional): The underlying async HTTP transport
-
     """
-
-    retry: Retry
-    _wrapped_transport: httpx.BaseTransport
-    _async_wrapped_transport: httpx.AsyncBaseTransport
 
     def __init__(
         self,
         retry: Optional[Retry] = None,
-        wrapped_transport: Optional[Union[httpx.BaseTransport, httpx.AsyncBaseTransport]] = None,
+        **kwargs,
     ) -> None:
         """
         Initializes a [RetryTransport][httpx_retries.RetryTransport] instance.
@@ -58,27 +43,13 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
         If no retry configuration is provided, a default one will be used; this will retry up to 10 times,
         with no backoff.
 
-        If using another transport, it will be retried upon failure.
-
         Args:
             retry (Retry, optional):
                 The retry configuration.
-            wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional):
-                The transport layer that will be wrapped and retried upon failure.
+            **kwargs: Additional arguments passed to httpx.HTTPTransport.
         """
-        if retry is None:
-            retry = Retry()
-
-        if wrapped_transport:
-            if isinstance(wrapped_transport, httpx.BaseTransport):
-                self._wrapped_transport = wrapped_transport
-            elif isinstance(wrapped_transport, httpx.AsyncBaseTransport):
-                self._async_wrapped_transport = wrapped_transport
-        else:
-            self._wrapped_transport = httpx.HTTPTransport()
-            self._async_wrapped_transport = httpx.AsyncHTTPTransport()
-
-        self.retry = retry
+        super().__init__(**kwargs)
+        self.retry = retry or Retry()
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         """
@@ -89,66 +60,13 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
         Returns:
             httpx.Response: The response received.
-
         """
-
         if self.retry.is_retryable_method(request.method):
-            send_method = partial(self._wrapped_transport.handle_request)
+            send_method = partial(super().handle_request)
             response = self._retry_operation(request, send_method)
         else:
-            response = self._wrapped_transport.handle_request(request)
+            response = super().handle_request(request)
         return response
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Sends an HTTP request, possibly with retries.
-
-        Args:
-            request: The request to perform.
-
-        Returns:
-            The response.
-        """
-        if self.retry.is_retryable_method(request.method):
-            send_method = partial(self._async_wrapped_transport.handle_async_request)
-            response = await self._retry_operation_async(request, send_method)
-        else:
-            response = await self._async_wrapped_transport.handle_async_request(request)
-        return response
-
-    async def aclose(self) -> None:
-        """
-        Closes the underlying HTTP transport, terminating all outstanding connections and rejecting any further
-        requests.
-
-        This should be called before the object is dereferenced, to ensure that connections are properly cleaned up.
-        """
-        await self._async_wrapped_transport.aclose()
-
-    def close(self) -> None:
-        """
-        Closes the underlying HTTP transport, terminating all outstanding connections and rejecting any further
-        requests.
-
-        This should be called before the object is dereferenced, to ensure that connections are properly cleaned up.
-        """
-        self._wrapped_transport.close()
-
-    async def _retry_operation_async(
-        self,
-        request: httpx.Request,
-        send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
-    ) -> httpx.Response:
-        retry = self.retry
-        response = None
-
-        while True:
-            if response is not None:
-                await retry.asleep(response)
-                retry = retry.increment()
-
-            response = await send_method(request)
-            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
-                return response
 
     def _retry_operation(
         self,
@@ -164,5 +82,80 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
                 retry = retry.increment()
 
             response = send_method(request)
+            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+                return response
+
+
+class AsyncRetryTransport(httpx.AsyncHTTPTransport):
+    """
+    An async HTTP transport that automatically retries requests using the given retry configuration.
+
+    Retry configuration is defined as a [Retry][httpx_retries.Retry] object.
+
+    ```python
+    retry = Retry(total=5, backoff_factor=0.5, respect_retry_after_header=False)
+    transport = AsyncRetryTransport(retry=retry)
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.get("https://example.com")
+    ```
+
+    Args:
+        retry (Retry, optional): The retry configuration.
+        **kwargs: Additional arguments passed to httpx.AsyncHTTPTransport.
+
+    Attributes:
+        retry (Retry): The retry configuration.
+    """
+
+    def __init__(
+        self,
+        retry: Optional[Retry] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Initializes an [AsyncRetryTransport][httpx_retries.AsyncRetryTransport] instance.
+
+        If no retry configuration is provided, a default one will be used; this will retry up to 10 times,
+        with no backoff.
+
+        Args:
+            retry (Retry, optional):
+                The retry configuration.
+            **kwargs: Additional arguments passed to httpx.AsyncHTTPTransport.
+        """
+        super().__init__(**kwargs)
+        self.retry = retry or Retry()
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Sends an HTTP request, possibly with retries.
+
+        Args:
+            request: The request to perform.
+
+        Returns:
+            The response.
+        """
+        if self.retry.is_retryable_method(request.method):
+            send_method = partial(super().handle_async_request)
+            response = await self._retry_operation_async(request, send_method)
+        else:
+            response = await super().handle_async_request(request)
+        return response
+
+    async def _retry_operation_async(
+        self,
+        request: httpx.Request,
+        send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
+    ) -> httpx.Response:
+        retry = self.retry
+        response = None
+
+        while True:
+            if response is not None:
+                await retry.asleep(response)
+                retry = retry.increment()
+
+            response = await send_method(request)
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response

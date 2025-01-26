@@ -1,4 +1,4 @@
-from .retry import Retry as Retry
-from .transport import RetryTransport as RetryTransport
+from .retry import Retry
+from .transport import AsyncRetryTransport, RetryTransport
 
-__all__ = ["Retry", "RetryTransport"]
+__all__ = ["Retry", "RetryTransport", "AsyncRetryTransport"]
