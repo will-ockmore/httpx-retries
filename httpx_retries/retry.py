@@ -89,27 +89,27 @@ class Retry:
         if attempts_made < 0:
             raise ValueError("attempts_made must be non-negative")
 
-        self.max_attempts = total
+        self.total = total
         self.backoff_factor = backoff_factor
         self.respect_retry_after_header = respect_retry_after_header
         self.max_backoff_wait = max_backoff_wait
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
-        self.retryable_methods = frozenset(
+        self.allowed_methods = frozenset(
             HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
         )
-        self.retry_status_codes = frozenset(
+        self.status_forcelist = frozenset(
             HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
         )
 
     def is_retryable_method(self, method: str) -> bool:
         """Check if a method is retryable."""
-        return HTTPMethod(method.upper()) in self.retryable_methods
+        return HTTPMethod(method.upper()) in self.allowed_methods
 
     def is_retryable_status_code(self, status_code: int) -> bool:
         """Check if a status code is retryable."""
-        return HTTPStatus(status_code) in self.retry_status_codes
+        return HTTPStatus(status_code) in self.status_forcelist
 
     def is_retry(self, method: str, status_code: int, has_retry_after: bool) -> bool:
         """
@@ -118,7 +118,7 @@ class Retry:
         This functions identically to urllib3's `Retry.is_retry` method.
         """
         return (
-            self.max_attempts > 0
+            self.total > 0
             and self.is_retryable_method(method)
             and self.is_retryable_status_code(status_code)
             and not has_retry_after
@@ -126,7 +126,7 @@ class Retry:
 
     def is_exhausted(self) -> bool:
         """Check if the retry attempts have been exhausted."""
-        return self.attempts_made >= self.max_attempts
+        return self.attempts_made >= self.total
 
     def parse_retry_after(self, retry_after: str) -> float:
         """
@@ -210,12 +210,12 @@ class Retry:
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
         return Retry(
-            total=self.max_attempts,
+            total=self.total,
             max_backoff_wait=self.max_backoff_wait,
             backoff_factor=self.backoff_factor,
             respect_retry_after_header=self.respect_retry_after_header,
-            allowed_methods=self.retryable_methods,
-            status_forcelist=self.retry_status_codes,
+            allowed_methods=self.allowed_methods,
+            status_forcelist=self.status_forcelist,
             backoff_jitter=self.backoff_jitter,
             attempts_made=self.attempts_made + 1,
         )

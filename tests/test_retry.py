@@ -11,7 +11,7 @@ from httpx_retries.retry import HTTPMethod, Retry
 
 def test_retry_initialization() -> None:
     retry = Retry()
-    assert retry.max_attempts == 10
+    assert retry.total == 10
     assert retry.backoff_factor == 0
     assert retry.respect_retry_after_header is True
     assert retry.max_backoff_wait == 120
@@ -26,14 +26,14 @@ def test_retry_custom_initialization() -> None:
         allowed_methods=["GET", "POST"],
         status_forcelist=[500, 502],
     )
-    assert retry.max_attempts == 5
+    assert retry.total == 5
     assert retry.backoff_factor == 0.5
     assert retry.respect_retry_after_header is False
     assert retry.max_backoff_wait == 30
-    assert HTTPMethod.GET in retry.retryable_methods
-    assert HTTPMethod.POST in retry.retryable_methods
-    assert HTTPStatus.INTERNAL_SERVER_ERROR in retry.retry_status_codes
-    assert HTTPStatus.BAD_GATEWAY in retry.retry_status_codes
+    assert HTTPMethod.GET in retry.allowed_methods
+    assert HTTPMethod.POST in retry.allowed_methods
+    assert HTTPStatus.INTERNAL_SERVER_ERROR in retry.status_forcelist
+    assert HTTPStatus.BAD_GATEWAY in retry.status_forcelist
 
 
 def test_is_retryable_method() -> None:
@@ -223,11 +223,11 @@ def test_increment() -> None:
     assert new_retry != retry
 
     assert new_retry.attempts_made == retry.attempts_made + 1
-    assert new_retry.max_attempts == retry.max_attempts
+    assert new_retry.total == retry.total
     assert new_retry.backoff_factor == retry.backoff_factor
     assert new_retry.respect_retry_after_header == retry.respect_retry_after_header
-    assert new_retry.retryable_methods == retry.retryable_methods
-    assert new_retry.retry_status_codes == retry.retry_status_codes
+    assert new_retry.allowed_methods == retry.allowed_methods
+    assert new_retry.status_forcelist == retry.status_forcelist
 
 
 def test_retry_validation_negative_total() -> None:
@@ -339,8 +339,7 @@ def test_retry_after_respects_max_wait() -> None:
 
 def test_default_values() -> None:
     retry = Retry()
-
-    assert retry.max_attempts == Retry.DEFAULT_TOTAL_RETRIES
-    assert retry.backoff_factor == Retry.DEFAULT_BACKOFF_FACTOR
-    assert retry.max_backoff_wait == Retry.DEFAULT_MAX_BACKOFF_WAIT
-    assert retry.backoff_jitter == Retry.DEFAULT_BACKOFF_JITTER
+    assert retry.total == 10
+    assert retry.backoff_factor == 0.0
+    assert retry.max_backoff_wait == 120.0
+    assert retry.backoff_jitter == 1.0
