@@ -18,8 +18,8 @@
 
 HTTPX Retries is a full implementation of request retry policies for HTTPX.
 
-It's very common to deal with **flaky** and **unreliable** APIs. When requests fail, applications need to be able
-to resend them.
+It's very common to deal with **flaky** and **unreliable** APIs. When requests fail, your program needs to be able
+to retry them.
 
 ---
 
@@ -87,7 +87,8 @@ differences:
 - [backoff_strategy][httpx_retries.Retry.backoff_strategy] can be overridden to customize backoff behavior.
 - Some options that are not strictly retry-related are not included (`raise_on_status`, `raise_on_redirect`)
 
-For more information, visit the [API reference](./api.md).
+!!! note
+    For more information, visit the [API reference](./api.md).
 
 ## Acknowledgements
 

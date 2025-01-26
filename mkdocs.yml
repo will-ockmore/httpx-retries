@@ -27,5 +27,7 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - pymdownx.details
+  - pymdownx.superfences
   - codehilite:
       css_class: highlight
