@@ -228,3 +228,119 @@ def test_increment() -> None:
     assert new_retry.respect_retry_after_header == retry.respect_retry_after_header
     assert new_retry.retryable_methods == retry.retryable_methods
     assert new_retry.retry_status_codes == retry.retry_status_codes
+
+
+def test_retry_validation_negative_total() -> None:
+    with pytest.raises(ValueError, match="total must be non-negative"):
+        Retry(total=-1)
+
+
+def test_retry_validation_negative_backoff_factor() -> None:
+    with pytest.raises(ValueError, match="backoff_factor must be non-negative"):
+        Retry(backoff_factor=-0.5)
+
+
+def test_retry_validation_zero_max_backoff_wait() -> None:
+    with pytest.raises(ValueError, match="max_backoff_wait must be positive"):
+        Retry(max_backoff_wait=0)
+
+
+def test_retry_validation_negative_max_backoff_wait() -> None:
+    with pytest.raises(ValueError, match="max_backoff_wait must be positive"):
+        Retry(max_backoff_wait=-1)
+
+
+def test_retry_validation_invalid_jitter() -> None:
+    with pytest.raises(ValueError, match="backoff_jitter must be between 0 and 1"):
+        Retry(backoff_jitter=1.5)
+
+
+def test_retry_validation_negative_jitter() -> None:
+    with pytest.raises(ValueError, match="backoff_jitter must be between 0 and 1"):
+        Retry(backoff_jitter=-0.5)
+
+
+def test_retry_validation_negative_attempts() -> None:
+    with pytest.raises(ValueError, match="attempts_made must be non-negative"):
+        Retry(attempts_made=-1)
+
+
+def test_method_case_insensitive() -> None:
+    retry = Retry(allowed_methods=["get", "POST"])
+    assert retry.is_retryable_method("GET")
+    assert retry.is_retryable_method("get")
+    assert retry.is_retryable_method("POST")
+    assert retry.is_retryable_method("post")
+
+
+def test_backoff_with_no_jitter() -> None:
+    retry = Retry(backoff_factor=1, backoff_jitter=0)
+    retry = retry.increment()  # One attempt made
+
+    # With no jitter, backoff should be exactly backoff_factor * (2 ** attempts_made)
+    assert retry.backoff_strategy() == 2.0
+
+
+def test_backoff_with_partial_jitter() -> None:
+    retry = Retry(backoff_factor=1, backoff_jitter=0.5)
+    retry = retry.increment()  # One attempt made
+
+    # With 0.5 jitter, backoff should be between 1.0 and 2.0 times backoff_factor * (2 ** attempts_made)
+    backoff = retry.backoff_strategy()
+    assert 1.0 <= backoff <= 2.0
+
+
+def test_zero_backoff_factor() -> None:
+    retry = Retry(backoff_factor=0)
+    retry = retry.increment()
+
+    assert retry.backoff_strategy() == 0.0
+
+
+def test_increment_preserves_jitter() -> None:
+    retry = Retry(backoff_jitter=0.5)
+    new_retry = retry.increment()
+
+    assert new_retry.backoff_jitter == retry.backoff_jitter
+
+
+def test_retry_after_header_invalid_format() -> None:
+    retry = Retry()
+    with pytest.raises(ValueError, match="Invalid Retry-After header: invalid date"):
+        retry.parse_retry_after("invalid date")
+
+
+def test_retry_after_header_logging(caplog: pytest.LogCaptureFixture) -> None:
+    retry = Retry()
+    headers = Headers({"Retry-After": "invalid date"})
+    retry._calculate_sleep(headers)
+
+    assert "Retry-After header is not a valid HTTP date: invalid date" in caplog.text
+
+
+def test_retry_after_header_precedence() -> None:
+    retry = Retry(backoff_factor=2)
+    retry = retry.increment()  # One attempt made
+
+    # Retry-After header should take precedence over backoff strategy
+    headers = Headers({"Retry-After": "1"})
+    sleep_time = retry._calculate_sleep(headers)
+
+    assert sleep_time == 1.0
+
+
+def test_retry_after_respects_max_wait() -> None:
+    retry = Retry(max_backoff_wait=1)
+    headers = Headers({"Retry-After": "10"})
+    sleep_time = retry._calculate_sleep(headers)
+
+    assert sleep_time == 1.0
+
+
+def test_default_values() -> None:
+    retry = Retry()
+
+    assert retry.max_attempts == Retry.DEFAULT_TOTAL_RETRIES
+    assert retry.backoff_factor == Retry.DEFAULT_BACKOFF_FACTOR
+    assert retry.max_backoff_wait == Retry.DEFAULT_MAX_BACKOFF_WAIT
+    assert retry.backoff_jitter == Retry.DEFAULT_BACKOFF_JITTER

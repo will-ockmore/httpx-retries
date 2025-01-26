@@ -2,4 +2,5 @@
     options:
         members:
             - RetryTransport
+            - AsyncRetryTransport
             - Retry

@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
-from typing import Optional, Union
+from typing import Final, Optional, Union, cast
 
 import httpx
 
@@ -51,7 +51,7 @@ class Retry:
 
     Args:
         total (int, optional): The maximum number of times to retry a request before giving up. Defaults to 10.
-        max_backoff_wait (float, optional): The maximum time to wait between retries in seconds. Defaults to 60.
+        max_backoff_wait (float, optional): The maximum time to wait between retries in seconds. Defaults to 120.
         backoff_factor (float, optional): The factor by which the wait time increases with each retry attempt.
             Defaults to 0.
         respect_retry_after_header (bool, optional): Whether to respect the Retry-After header in HTTP responses
@@ -64,10 +64,11 @@ class Retry:
         attempts_made (int, optional): The number of attempts already made. Defaults to 0.
     """
 
-    RETRYABLE_METHODS = frozenset(
+    # Class constants using Final for better type safety
+    RETRYABLE_METHODS: Final[frozenset[HTTPMethod]] = frozenset(
         [HTTPMethod.HEAD, HTTPMethod.GET, HTTPMethod.PUT, HTTPMethod.DELETE, HTTPMethod.OPTIONS, HTTPMethod.TRACE]
     )
-    RETRYABLE_STATUS_CODES = frozenset(
+    RETRYABLE_STATUS_CODES: Final[frozenset[HTTPStatus]] = frozenset(
         [
             HTTPStatus.TOO_MANY_REQUESTS,
             HTTPStatus.BAD_GATEWAY,
@@ -75,65 +76,59 @@ class Retry:
             HTTPStatus.GATEWAY_TIMEOUT,
         ]
     )
-    MAX_BACKOFF_WAIT = 120
+    DEFAULT_MAX_BACKOFF_WAIT: Final[float] = 120.0
+    DEFAULT_TOTAL_RETRIES: Final[int] = 10
+    DEFAULT_BACKOFF_FACTOR: Final[float] = 0.0
+    DEFAULT_BACKOFF_JITTER: Final[float] = 1.0
 
     def __init__(
         self,
-        total: int = 10,
+        total: int = DEFAULT_TOTAL_RETRIES,
         allowed_methods: Optional[Iterable[Union[HTTPMethod, str]]] = None,
         status_forcelist: Optional[Iterable[Union[HTTPStatus, int]]] = None,
-        backoff_factor: float = 0,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         respect_retry_after_header: bool = True,
-        max_backoff_wait: float = MAX_BACKOFF_WAIT,
-        backoff_jitter: float = 1,
+        max_backoff_wait: float = DEFAULT_MAX_BACKOFF_WAIT,
+        backoff_jitter: float = DEFAULT_BACKOFF_JITTER,
         attempts_made: int = 0,
     ) -> None:
+        """Initialize a new Retry instance."""
+        if total < 0:
+            raise ValueError("total must be non-negative")
+        if backoff_factor < 0:
+            raise ValueError("backoff_factor must be non-negative")
+        if max_backoff_wait <= 0:
+            raise ValueError("max_backoff_wait must be positive")
+        if not 0 <= backoff_jitter <= 1:
+            raise ValueError("backoff_jitter must be between 0 and 1")
+        if attempts_made < 0:
+            raise ValueError("attempts_made must be non-negative")
+
         self.max_attempts = total
         self.backoff_factor = backoff_factor
         self.respect_retry_after_header = respect_retry_after_header
-        self.retryable_methods = (
-            frozenset(HTTPMethod(method) for method in allowed_methods) if allowed_methods else self.RETRYABLE_METHODS
-        )
-        self.retry_status_codes = (
-            frozenset(HTTPStatus(status_code) for status_code in status_forcelist)
-            if status_forcelist
-            else self.RETRYABLE_STATUS_CODES
-        )
         self.max_backoff_wait = max_backoff_wait
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
+        # Convert methods and status codes to their proper types
+        self.retryable_methods = frozenset(
+            HTTPMethod(str(method).upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
+        )
+        self.retry_status_codes = frozenset(
+            HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
+        )
+
     def is_retryable_method(self, method: str) -> bool:
-        """
-        Check if a method is retryable.
-
-        Args:
-            method (str): The HTTP method to check.
-
-        Returns:
-            bool: True if the method is retryable, False otherwise.
-        """
-        return method in self.retryable_methods
+        """Check if a method is retryable."""
+        return HTTPMethod(method.upper()) in self.retryable_methods
 
     def is_retryable_status_code(self, status_code: int) -> bool:
-        """
-        Check if a status code is retryable.
-
-        Args:
-            status_code (int): The HTTP status code to check.
-
-        Returns:
-            bool: True if the status code is retryable, False otherwise.
-        """
-        return status_code in self.retry_status_codes
+        """Check if a status code is retryable."""
+        return HTTPStatus(status_code) in self.retry_status_codes
 
     def is_exhausted(self) -> bool:
-        """
-        Check if the retry attempts have been exhausted.
-
-        Returns:
-            bool: True if the retry attempts have been exhausted, False otherwise.
-        """
+        """Check if the retry attempts have been exhausted."""
         return self.attempts_made >= self.max_attempts
 
     def parse_retry_after(self, retry_after: str) -> float:
@@ -141,83 +136,71 @@ class Retry:
         Parse the Retry-After header.
 
         Args:
-            retry_after (str): The Retry-After header value.
+            retry_after: The Retry-After header value.
 
         Returns:
-            float: The number of seconds to wait before retrying.
+            The number of seconds to wait before retrying.
+
+        Raises:
+            ValueError: If the Retry-After header is not a valid number or HTTP date.
         """
+        retry_after = retry_after.strip()
         if retry_after.isdigit():
             return float(retry_after)
 
         try:
             parsed_date = parsedate_to_datetime(retry_after)
-        except TypeError:
-            # This is to ensure the behaviour in python 3.9 matches the recent versions.
-            # See https://github.com/python/cpython/pull/22090
-            # For this reason, the following two lines can't be included in coverage.
-            raise ValueError("Retry-After header is not a valid HTTP date")  # pragma: no cover
-        if parsed_date.tzinfo is None:
-            parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)  # pragma: no cover
-        diff = (parsed_date - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
-        if diff > 0:
-            return diff
+            if parsed_date.tzinfo is None:
+                parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
 
-        return 0
+            diff = (parsed_date - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+            return max(0.0, diff)
+        except (TypeError, ValueError):
+            raise ValueError(f"Invalid Retry-After header: {retry_after}")
 
     def backoff_strategy(self) -> float:
         """
-        Return the backoff time based on the number of attempts.
+        Calculate the backoff time based on the number of attempts.
 
-        If `backoff_factor` is set, it will use an exponential backoff with configurable jitter;
-        otherwise, it will return 0 (no backoff).
+        Returns:
+            The calculated backoff time in seconds, capped by max_backoff_wait.
         """
-        backoff: float = self.backoff_factor * (2 ** (self.attempts_made))
-        if self.backoff_jitter:
-            backoff = backoff * random.uniform(0, self.backoff_jitter)
+        if self.backoff_factor == 0:
+            return 0.0
+
+        # Calculate exponential backoff
+        backoff = self.backoff_factor * (2**self.attempts_made)
+
+        # Apply jitter if configured
+        if self.backoff_jitter > 0:
+            backoff *= random.uniform(1 - self.backoff_jitter, 1)
+
         return min(backoff, self.max_backoff_wait)
 
     def _calculate_sleep(self, headers: Union[httpx.Headers, Mapping[str, str]]) -> float:
-        retry_after_header = (headers.get("Retry-After") or "").strip()
-        if self.respect_retry_after_header and retry_after_header:
-            try:
-                retry_after = self.parse_retry_after(retry_after_header)
-                return min(retry_after, self.max_backoff_wait)
-            except ValueError:
-                # The behaviour for an invalid Retry-After header is the same as if no Retry-After header was present.
-                # A warning is logged to indicate the issue.
-                logger.warning("Retry-After header is not a valid HTTP date: %s", retry_after_header)
+        """Calculate the sleep duration based on headers and backoff strategy."""
+        # Check Retry-After header first if enabled
+        if self.respect_retry_after_header:
+            retry_after = headers.get("Retry-After", "").strip()
+            if retry_after:
+                try:
+                    return min(self.parse_retry_after(retry_after), self.max_backoff_wait)
+                except ValueError:
+                    logger.warning("Retry-After header is not a valid HTTP date: %s", retry_after)
 
-        if self.attempts_made == 0:
-            return 0
-
-        return self.backoff_strategy()
+        # Fall back to backoff strategy
+        return self.backoff_strategy() if self.attempts_made > 0 else 0.0
 
     def sleep(self, response: httpx.Response) -> None:
-        """
-        Sleep between retry attempts.
-
-        This method will respect a server’s Retry-After response header and sleep the duration of the time requested.
-        If that is not present, it will use an exponential backoff.
-        By default, the backoff factor is 0 and this method will return immediately.
-        """
+        """Sleep between retry attempts using the calculated duration."""
         time.sleep(self._calculate_sleep(response.headers))
 
     async def asleep(self, response: httpx.Response) -> None:
-        """
-        Sleep between retry attempts.
-
-        This is the async version of the `sleep` method.
-
-        This method will respect a server’s Retry-After response header and sleep the duration of the time requested.
-        If that is not present, it will use an exponential backoff.
-        By default, the backoff factor is 0 and this method will return immediately.
-        """
+        """Sleep between retry attempts asynchronously using the calculated duration."""
         await asyncio.sleep(self._calculate_sleep(response.headers))
 
     def increment(self) -> "Retry":
-        """
-        Return a new Retry instance with the attempt count incremented.
-        """
+        """Return a new Retry instance with the attempt count incremented."""
         return Retry(
             total=self.max_attempts,
             max_backoff_wait=self.max_backoff_wait,
@@ -225,5 +208,6 @@ class Retry:
             respect_retry_after_header=self.respect_retry_after_header,
             allowed_methods=self.retryable_methods,
             status_forcelist=self.retry_status_codes,
+            backoff_jitter=self.backoff_jitter,
             attempts_made=self.attempts_made + 1,
         )
