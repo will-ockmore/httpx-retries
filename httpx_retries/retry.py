@@ -28,6 +28,7 @@ else:  # pragma: no cover
         TRACE = "TRACE"
 
 
+
 class Retry:
     """
     A class to encapsulate retry logic and configuration.
@@ -64,7 +65,6 @@ class Retry:
         attempts_made (int, optional): The number of attempts already made. Defaults to 0.
     """
 
-    # Class constants using Final for better type safety
     RETRYABLE_METHODS: Final[frozenset[HTTPMethod]] = frozenset(
         [HTTPMethod.HEAD, HTTPMethod.GET, HTTPMethod.PUT, HTTPMethod.DELETE, HTTPMethod.OPTIONS, HTTPMethod.TRACE]
     )
@@ -111,9 +111,8 @@ class Retry:
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
-        # Convert methods and status codes to their proper types
         self.retryable_methods = frozenset(
-            HTTPMethod(str(method).upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
+            HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
         )
         self.retry_status_codes = frozenset(
             HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
