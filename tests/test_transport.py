@@ -6,7 +6,7 @@ import httpx
 import pytest
 from httpx import Request, Response
 
-import httpx_retries
+from httpx_retries import RetryTransport
 
 
 def status_codes(codes: list[tuple[int, Union[str, None]]]) -> Generator[tuple[int, Union[str, None]], None, None]:
@@ -93,7 +93,8 @@ def mock_async_transport(mock_asleep: AsyncMock) -> Generator[AsyncMockTransport
 
 def test_successful_request(mock_transport: MockTransport) -> None:
     mock_sleep, _ = mock_transport
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com")
@@ -105,7 +106,8 @@ def test_successful_request(mock_transport: MockTransport) -> None:
 def test_failed_request(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None)])
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
@@ -117,7 +119,8 @@ def test_failed_request(mock_transport: MockTransport) -> None:
 def test_unretryable_status_code(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(403, None), (200, None)])
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
@@ -129,7 +132,8 @@ def test_unretryable_status_code(mock_transport: MockTransport) -> None:
 def test_unretryable_method(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None), (200, None)])
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.post("https://example.com/fail")
@@ -142,7 +146,8 @@ def test_retries_reset_for_new_request(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None)])
     status_code_sequences["https://example.com/fail2"] = status_codes([(429, None)])
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
@@ -157,7 +162,8 @@ def test_retries_reset_for_new_request(mock_transport: MockTransport) -> None:
 def test_retry_respects_retry_after_header(mock_transport: MockTransport) -> None:
     mock_sleep, status_code_sequences = mock_transport
     status_code_sequences["https://example.com/fail"] = status_codes([(429, "5")])
-    transport = httpx_retries.RetryTransport()
+    wrapped_transport = httpx.HTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     with httpx.Client(transport=transport) as client:
         response = client.get("https://example.com/fail")
@@ -170,7 +176,8 @@ def test_retry_respects_retry_after_header(mock_transport: MockTransport) -> Non
 @pytest.mark.asyncio
 async def test_async_successful_request(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
-    transport = httpx_retries.AsyncRetryTransport()
+    wrapped_transport = httpx.AsyncHTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com")
@@ -183,7 +190,8 @@ async def test_async_successful_request(mock_async_transport: AsyncMockTransport
 async def test_async_failed_request(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
-    transport = httpx_retries.AsyncRetryTransport()
+    wrapped_transport = httpx.AsyncHTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com/fail")
@@ -196,7 +204,8 @@ async def test_async_failed_request(mock_async_transport: AsyncMockTransport) ->
 async def test_async_unretryable_method(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
-    transport = httpx_retries.AsyncRetryTransport()
+    wrapped_transport = httpx.AsyncHTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.post("https://example.com/fail")
@@ -210,7 +219,8 @@ async def test_retries_reset_for_new_request_async(mock_async_transport: AsyncMo
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None)])
     status_code_sequences["https://example.com/fail2"] = astatus_codes([(429, None)])
-    transport = httpx_retries.AsyncRetryTransport()
+    wrapped_transport = httpx.AsyncHTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com/fail")
@@ -226,7 +236,8 @@ async def test_retries_reset_for_new_request_async(mock_async_transport: AsyncMo
 async def test_retry_respects_retry_after_header_async(mock_async_transport: AsyncMockTransport) -> None:
     mock_asleep, status_code_sequences = mock_async_transport
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, "5")])
-    transport = httpx_retries.AsyncRetryTransport()
+    wrapped_transport = httpx.AsyncHTTPTransport()
+    transport = RetryTransport(transport=wrapped_transport)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com/fail")
@@ -234,3 +245,24 @@ async def test_retry_respects_retry_after_header_async(mock_async_transport: Asy
 
     assert mock_asleep.call_count == 10
     mock_asleep.assert_has_calls([call(5)] * 10)
+
+
+def test_wrong_transport_type_sync() -> None:
+    """Test that using a sync client with an async transport raises an error"""
+    transport = RetryTransport(transport=httpx.AsyncHTTPTransport())
+
+    with pytest.raises(
+        RuntimeError, match="Synchronous request received but transport is not an instance of httpx.HTTPTransport"
+    ):
+        transport.handle_request(httpx.Request("GET", "https://example.com"))
+
+
+@pytest.mark.asyncio
+async def test_wrong_transport_type_async() -> None:
+    """Test that using an async client with a sync transport raises an error"""
+    transport = RetryTransport(transport=httpx.HTTPTransport())
+
+    with pytest.raises(
+        RuntimeError, match="Async request received but transport is not an instance of httpx.AsyncHTTPTransport"
+    ):
+        await transport.handle_async_request(httpx.Request("GET", "https://example.com"))

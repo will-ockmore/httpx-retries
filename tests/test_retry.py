@@ -343,3 +343,21 @@ def test_default_values() -> None:
     assert retry.backoff_factor == 0.0
     assert retry.max_backoff_wait == 120.0
     assert retry.backoff_jitter == 1.0
+
+
+def test_is_retry() -> None:
+    retry = Retry(total=3)
+    assert retry.is_retry("GET", 429, False) is True
+    assert retry.is_retry("POST", 429, False) is False
+    assert retry.is_retry("GET", 404, False) is False
+    assert retry.is_retry("GET", 429, True) is False
+
+    exhausted_retry = Retry(total=0)
+    assert exhausted_retry.is_retry("GET", 429, False) is False
+
+
+def test_is_retry_custom_configuration() -> None:
+    retry = Retry(total=3, allowed_methods=["POST"], status_forcelist=[404])
+    assert retry.is_retry("POST", 404, False) is True
+    assert retry.is_retry("GET", 404, False) is False
+    assert retry.is_retry("POST", 429, False) is False
