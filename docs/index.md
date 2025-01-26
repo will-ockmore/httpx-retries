@@ -40,7 +40,8 @@ with httpx.Client(transport=RetryTransport()) as client:
     response = client.get("https://example.com")
 ```
 
-For async usage:
+Async usage is just as straightforward.
+
 ``` python
 async with httpx.AsyncClient(transport=RetryTransport()) as client:
     response = await client.get("https://example.com")
@@ -78,9 +79,12 @@ with requests.Session() as session:
     response = session.get("https://example.com")
 ```
 
-To reduce boilerplate, this package includes a transport that works with both sync and async HTTPX clients, so you don't have to explicitly define policies for simple use cases.
+To reduce boilerplate, this package includes a transport that works with both sync and async HTTPX Clients, with
+sensible defaults for simple use cases.
 
-HTTPX adds support for asynchronous requests, so the package exposes a new retry utility ([Retry][httpx_retries.Retry]). To make it easy to migrate, the API surface is almost identical, with a few main differences:
+HTTPX adds support for asynchronous requests, and this package includes a new retry utility that can handle this
+behaviour ([Retry][httpx_retries.Retry]).
+To make it easy to migrate, the API surface is almost identical to `Retry` from urllib3, with a few main differences:
 
 - `total` is the only parameter used to configure the number of retries.
 - [asleep][httpx_retries.Retry.asleep] is an async implementation of [sleep][httpx_retries.Retry.sleep].

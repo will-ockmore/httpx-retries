@@ -32,6 +32,13 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         response = client.get("https://example.com")
     ```
 
+    By default, the implementation will create a sync and async transport internally, and use whichever is appropriate
+    for the request. If you want to configure your own transport, provide it to the `transport` argument:
+
+    ```python
+    transport = RetryTransport(transport=httpx.HTTPTransport(local_address="0.0.0.0"))
+    ```
+
     Args:
         transport: Optional transport to wrap. If not provided, async and sync transports are created internally.
         retry: The retry configuration.
