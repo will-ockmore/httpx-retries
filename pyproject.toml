@@ -1,40 +1,36 @@
-[tool.poetry]
-name = "httpx-retry"
+[project]
+name = "httpx-retries"
 version = "0.1.0"
 description = "Intelligently retry requests with httpx"
-authors = ["Will Ockmore <will.ockmore@gmail.com>"]
-license = "MIT"
 readme = "README.md"
+license = "MIT"
+authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
+dependencies = ["httpx>=0.27.0"]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-httpx = ">=0.27.0"
-
-[tool.poetry.group.dev.dependencies]
-httpx = "^0.27.2"
-ruff = "^0.6.8"
-mypy = "^1.11.2"
-pytest = "^8.3.3"
-pytest-asyncio = "^0.24.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "httpx",
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "pygments",
+    "coverage",
+]
 
 # Tooling configuration.
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "C4", "TID251"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["wf"]
+select = ["E", "F", "W", "I", "C4"]
 
 [tool.coverage.run]
-source = ["httpx-retry", "tests"]
+source = ["httpx_retry", "tests"]
 relative_files = true
 
 [tool.coverage.report]
@@ -44,6 +40,8 @@ fail_under = 100
 exclude_lines = [
     # Allow manually specifying untestable code.
     "pragma: no cover",
+    # Allow conditional imports to remain untested.
+    "if sys.version_info.*",
     # Can't test type checking code.
     "if TYPE_CHECKING:",
     "@overload",
