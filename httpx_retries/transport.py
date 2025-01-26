@@ -24,17 +24,22 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
         response = client.get("https://example.com")
     ```
 
+    This transport can be used with both sync and async clients.
+
+    ```python
+    with httpx.AsyncClient(transport=RetryTransport()) as client:
+        response = await client.get("https://example.com")
+    ```
+
     Args:
-        retry (Retry, optional): The retry configuration. Defaults to Retry().
+        retry (Retry, optional): The retry configuration.
         wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional):
             The underlying HTTP transport to wrap and use for making requests.
 
     Attributes:
         retry (Retry): The retry configuration.
-        _wrapped_transport (httpx.BaseTransport, optional): The underlying HTTP transport
-            being wrapped.
-        _async_wrapped_transport (httpx.AsyncBaseTransport, optional): The underlying HTTP transport
-            being wrapped for async requests.
+        _wrapped_transport (httpx.BaseTransport, optional): The underlying HTTP transport.
+        _async_wrapped_transport (httpx.AsyncBaseTransport, optional): The underlying async HTTP transport
 
     """
 
@@ -44,20 +49,26 @@ class RetryTransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
 
     def __init__(
         self,
-        retry: Retry = Retry(),
+        retry: Optional[Retry] = None,
         wrapped_transport: Optional[Union[httpx.BaseTransport, httpx.AsyncBaseTransport]] = None,
     ) -> None:
         """
-        Initializes the instance of RetryTransport class with the given parameters.
+        Initializes a [RetryTransport][httpx_retries.RetryTransport] instance.
+
+        If no retry configuration is provided, a default one will be used; this will retry up to 10 times,
+        with no backoff.
+
+        If using another transport, it will be retried upon failure.
 
         Args:
             retry (Retry, optional):
-                The retry configuration. Defaults to Retry().
-            wrapped_transport (httpx.BaseTransport):
-                The transport layer that will be wrapped and retried upon failure.
-            async_wrapped_transport (httpx.AsyncBaseTransport):
+                The retry configuration.
+            wrapped_transport (Union[httpx.BaseTransport, httpx.AsyncBaseTransport], optional):
                 The transport layer that will be wrapped and retried upon failure.
         """
+        if retry is None:
+            retry = Retry()
+
         if wrapped_transport:
             if isinstance(wrapped_transport, httpx.BaseTransport):
                 self._wrapped_transport = wrapped_transport

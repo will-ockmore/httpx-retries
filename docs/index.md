@@ -1,4 +1,5 @@
-# HTTPX Retry
+# HTTPX Retries
+
 
 <p>
 <a href="https://github.com/will-ockmore/httpx-retry/actions">
@@ -10,7 +11,41 @@
 <!-- </a> -->
 </p>
 
-<em>A next-generation HTTP client for Python.</em>
+<em>A modern retry layer for HTTPX.</em>
+
+
+---
+
+HTTPX Retries is a complete implementation of request retry policies for HTTPX.
+
+It's very common to deal with *flaky* and *unreliable* APIs. When requests fail, applications need the
+ability to resend them.
+
+---
+
+Install HTTPX Retries using pip:
+
+```
+pip install httpx-retries
+```
+
+---
+
+To get started, define your retry strategy and add your transport to your client.
+
+``` python
+retry = Retry(total=5, backoff_factor=0.5, respect_retry_after_header=False)
+transport = RetryTransport(retry=retry)
+
+with httpx.Client(transport=transport) as client:
+    response = client.get("https://example.com")
+```
+
+
+This package includes a custom transport ([RetryTransport][httpx_retries.RetryTransport]) and a retry utility ([Retry][httpx_retries.Retry]), which will be familiar to users of
+[urllib3's Retry](https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.Retry).
+
+
 
 ## Commands
 

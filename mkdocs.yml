@@ -27,3 +27,8 @@ plugins:
       options:
         filters:
           - "!^_"
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      css_class: highlight

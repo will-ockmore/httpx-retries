@@ -37,13 +37,16 @@ class Retry:
 
     If `backoff_factor` is set, it will use an exponential backoff with configurable jitter.
 
-    For complex use cases, you can subclass this class and override the `backoff_strategy` method.
+    For complex use cases, you can override the `backoff_strategy` method.
 
     ```python
     class CustomRetry(Retry):
         def backoff_strategy(self) -> float:
             # Custom backoff logic here
-            return 1.0
+            if self.attempts_made == 3:
+                return 1.0
+
+            return super().backoff_strategy()
     ```
 
     Args:

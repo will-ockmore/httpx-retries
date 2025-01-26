@@ -16,6 +16,7 @@ dev = [
     "pytest-asyncio",
     "mkdocs-material",
     "mkdocstrings[python]",
+    "pygments",
     "coverage",
 ]
 
