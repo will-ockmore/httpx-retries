@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
     """
-    A transport that automatically retries requests using the given retry configuration.
-
-    Retry configuration is defined as a [Retry][httpx_retries.Retry] object.
+    A transport that automatically retries requests.
 
     ```python
     with httpx.Client(transport=RetryTransport()) as client:
@@ -61,7 +59,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             request (httpx.Request): The request to send.
 
         Returns:
-            httpx.Response: The response received.
+            The final response.
         """
         if self._sync_transport is None:
             raise RuntimeError("Synchronous request received but no sync transport available")
@@ -80,7 +78,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             request: The request to perform.
 
         Returns:
-            The response.
+            The final response.
         """
         if self._async_transport is None:
             raise RuntimeError("Async request received but no async transport available")

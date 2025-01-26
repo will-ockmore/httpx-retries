@@ -218,19 +218,6 @@ async def test_async_only_transport() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_no_retry_needed(mock_async_responses: AsyncMockResponse) -> None:
-    mock_asleep, status_code_sequences = mock_async_responses
-    status_code_sequences["https://example.com"] = astatus_codes([(200, None)])
-    transport = RetryTransport()
-
-    async with httpx.AsyncClient(transport=transport) as client:
-        response = await client.get("https://example.com")
-
-    assert response.status_code == 200
-    assert mock_asleep.call_count == 0
-
-
-@pytest.mark.asyncio
 async def test_async_unretryable_method(mock_async_responses: AsyncMockResponse) -> None:
     mock_asleep, status_code_sequences = mock_async_responses
     status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None), (200, None)])

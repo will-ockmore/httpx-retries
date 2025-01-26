@@ -31,7 +31,7 @@ pip install httpx-retries
 
 ---
 
-To get started, add the transport to your client.
+To get started, add the transport to your client:
 
 ``` python
 import httpx
@@ -41,12 +41,18 @@ with httpx.Client(transport=RetryTransport()) as client:
     response = client.get("https://example.com")
 ```
 
-If you want to use a specific retry strategy, provide a [Retry][httpx_retries.Retry] configuration.
+For async usage:
+``` python
+async with httpx.AsyncClient(transport=RetryTransport()) as client:
+    response = await client.get("https://example.com")
+```
+
+If you want to use a specific retry strategy, provide a [Retry][httpx_retries.Retry] configuration:
 
 ``` python
 from httpx_retries import Retry
 
-retry = Retry(total=5, backoff_factor=0.5, respect_retry_after_header=False)
+retry = Retry(total=5, backoff_factor=0.5)
 transport = RetryTransport(retry=retry)
 
 with httpx.Client(transport=transport) as client:
@@ -58,14 +64,13 @@ with httpx.Client(transport=transport) as client:
 HTTPX Retries builds on the patterns users will expect from `urllib` and `requests`. The typical approach has been
 to use [urllib3's Retry](https://urllib3.readthedocs.io/en/latest/reference/urllib3.util.html#urllib3.util.Retry)
 utility to configure a retry policy. The equivalent code to match the above example using
-[requests](https://requests.readthedocs.io/en/latest/) is
-
+[requests](https://requests.readthedocs.io/en/latest/) is:
 
 ``` python
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-retry = Retry(total=5, backoff_factor=0.5, respect_retry_after_header=False)
+retry = Retry(total=5, backoff_factor=0.5)
 adapter = HTTPAdapter(max_retries=retry)
 
 with requests.Session() as session:
@@ -74,13 +79,9 @@ with requests.Session() as session:
     response = session.get("https://example.com")
 ```
 
-To reduce boilerplate, this package includes custom transports
- ([RetryTransport][httpx_retries.RetryTransport] and [AsyncRetryTransport][httpx_retries.AsyncRetryTransport]), so
-you don't have to to explicitly define policies for simple use cases.
+To reduce boilerplate, this package includes a transport that works with both sync and async HTTPX clients, so you don't have to explicitly define policies for simple use cases.
 
-HTTPX adds support for asynchronous requests, so the package exposes a new retry
-utility ([Retry][httpx_retries.Retry]). To make it easy to migrate, the API surface is almost identical, with a few main
-differences:
+HTTPX adds support for asynchronous requests, so the package exposes a new retry utility ([Retry][httpx_retries.Retry]). To make it easy to migrate, the API surface is almost identical, with a few main differences:
 
 - `total` is the only parameter used to configure the number of retries.
 - [asleep][httpx_retries.Retry.asleep] is an async implementation of [sleep][httpx_retries.Retry.sleep].
