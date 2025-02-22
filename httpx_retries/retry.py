@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
-from typing import Final, Optional, Union
+from typing import Final, Optional, Tuple, Type, Union
 
 import httpx
 
@@ -65,12 +65,19 @@ class Retry:
             HTTPStatus.GATEWAY_TIMEOUT,
         ]
     )
+    RETRYABLE_EXCEPTIONS: Final[Tuple[Type[httpx.HTTPError], ...]] = (
+        httpx.ConnectTimeout,
+        httpx.NetworkError,
+        httpx.ProtocolError,
+        httpx.ReadTimeout,
+    )
 
     def __init__(
         self,
         total: int = 10,
         allowed_methods: Optional[Iterable[Union[HTTPMethod, str]]] = None,
         status_forcelist: Optional[Iterable[Union[HTTPStatus, int]]] = None,
+        retry_on_exceptions: Optional[Iterable[Type[httpx.HTTPError]]] = None,
         backoff_factor: float = 0.0,
         respect_retry_after_header: bool = True,
         max_backoff_wait: float = 120.0,
@@ -96,11 +103,18 @@ class Retry:
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
-        self.allowed_methods = frozenset(
-            HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
+        self.allowed_methods = (
+            self.RETRYABLE_METHODS
+            if allowed_methods is None
+            else frozenset(HTTPMethod(method.upper()) for method in allowed_methods)
         )
-        self.status_forcelist = frozenset(
-            HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
+        self.status_forcelist = (
+            self.RETRYABLE_STATUS_CODES
+            if status_forcelist is None
+            else frozenset(HTTPStatus(int(code)) for code in status_forcelist)
+        )
+        self.retryable_exceptions = (
+            self.RETRYABLE_EXCEPTIONS if retry_on_exceptions is None else tuple(retry_on_exceptions)
         )
 
     def is_retryable_method(self, method: str) -> bool:
@@ -110,6 +124,10 @@ class Retry:
     def is_retryable_status_code(self, status_code: int) -> bool:
         """Check if a status code is retryable."""
         return HTTPStatus(status_code) in self.status_forcelist
+
+    def is_retryable_exception(self, exception: httpx.HTTPError) -> bool:
+        """Check if an exception is retryable."""
+        return isinstance(exception, self.retryable_exceptions)
 
     def is_retry(self, method: str, status_code: int, has_retry_after: bool) -> bool:
         """
@@ -199,13 +217,13 @@ class Retry:
         # Fall back to backoff strategy
         return self.backoff_strategy() if self.attempts_made > 0 else 0.0
 
-    def sleep(self, response: httpx.Response) -> None:
+    def sleep(self, response: httpx.Response | httpx.HTTPError) -> None:
         """Sleep between retry attempts using the calculated duration."""
-        time.sleep(self._calculate_sleep(response.headers))
+        time.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
-    async def asleep(self, response: httpx.Response) -> None:
+    async def asleep(self, response: httpx.Response | httpx.HTTPError) -> None:
         """Sleep between retry attempts asynchronously using the calculated duration."""
-        await asyncio.sleep(self._calculate_sleep(response.headers))
+        await asyncio.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
