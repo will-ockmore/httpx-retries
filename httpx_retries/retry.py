@@ -66,10 +66,9 @@ class Retry:
         ]
     )
     RETRYABLE_EXCEPTIONS: Final[Tuple[Type[httpx.HTTPError], ...]] = (
-        httpx.ConnectTimeout,
+        httpx.TimeoutException,
         httpx.NetworkError,
-        httpx.ProtocolError,
-        httpx.ReadTimeout,
+        httpx.RemoteProtocolError,
     )
 
     def __init__(
@@ -103,15 +102,11 @@ class Retry:
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
-        self.allowed_methods = (
-            self.RETRYABLE_METHODS
-            if allowed_methods is None
-            else frozenset(HTTPMethod(method.upper()) for method in allowed_methods)
+        self.allowed_methods = frozenset(
+            HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
         )
-        self.status_forcelist = (
-            self.RETRYABLE_STATUS_CODES
-            if status_forcelist is None
-            else frozenset(HTTPStatus(int(code)) for code in status_forcelist)
+        self.status_forcelist = frozenset(
+            HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
         )
         self.retryable_exceptions = (
             self.RETRYABLE_EXCEPTIONS if retry_on_exceptions is None else tuple(retry_on_exceptions)
@@ -217,11 +212,11 @@ class Retry:
         # Fall back to backoff strategy
         return self.backoff_strategy() if self.attempts_made > 0 else 0.0
 
-    def sleep(self, response: httpx.Response | httpx.HTTPError) -> None:
+    def sleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
         """Sleep between retry attempts using the calculated duration."""
         time.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
-    async def asleep(self, response: httpx.Response | httpx.HTTPError) -> None:
+    async def asleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
         """Sleep between retry attempts asynchronously using the calculated duration."""
         await asyncio.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
