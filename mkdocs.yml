@@ -1,8 +1,14 @@
 site_name: HTTPX Retries
 site_url: https://will-ockmore.github.io/httpx-retries
+
+repo_url: https://github.com/will-ockmore/httpx-retries
+repo_name: will-ockmore/httpx-retries
+
 nav:
   - Home: index.md
   - API: api.md
+  - Contributing: contributing.md
+
 theme:
   name: material
   palette:
