@@ -103,7 +103,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., httpx.Response],
     ) -> httpx.Response:
         retry = self.retry
-        response = None
+        response: Union[httpx.Response, httpx.HTTPError, None] = None
 
         while True:
             if response is not None:
@@ -128,7 +128,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
     ) -> httpx.Response:
         retry = self.retry
-        response = None
+        response: Union[httpx.Response, httpx.HTTPError, None] = None
 
         while True:
             if response is not None:
