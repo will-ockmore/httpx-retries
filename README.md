@@ -93,6 +93,10 @@ To make it easy to migrate, the API surface is almost identical to `Retry` from 
 - `backoff_strategy` can be overridden to customize backoff behavior.
 - Some options that are not strictly retry-related are not included (`raise_on_status`, `raise_on_redirect`)
 
+## Contributing
+
+If you want to contribute to the project, check out the [Contributing Guide](https://will-ockmore.github.io/httpx-retries/contributing/).
+
 ## Acknowledgements
 
 This package builds on the great work done on [HTTPX](https://www.python-httpx.org/), [urllib3](https://urllib3.readthedocs.io/en/stable/) and [requests](https://requests.readthedocs.io/en/latest/).
