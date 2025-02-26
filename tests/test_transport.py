@@ -6,7 +6,7 @@ import httpx
 import pytest
 from httpx import Request, Response
 
-from httpx_retries import RetryTransport
+from httpx_retries import Retry, RetryTransport
 
 
 def status_codes(codes: list[tuple[int, Union[str, None]]]) -> Generator[tuple[int, Union[str, None]], None, None]:
@@ -131,6 +131,79 @@ def test_unretryable_method(mock_responses: MockResponse) -> None:
         assert response.status_code == 429
 
     assert mock_sleep.call_count == 0
+
+
+def test_unretryable_exception(mock_responses: MockResponse) -> None:
+    mock_sleep, _ = mock_responses
+    transport = RetryTransport()
+
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ProxyError("Proxy error")):
+        with httpx.Client(transport=transport) as client:
+            with pytest.raises(httpx.ProxyError, match="Proxy error"):
+                client.get("https://example.com")
+
+    assert mock_sleep.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_async_unretryable_exception(mock_async_responses: AsyncMockResponse) -> None:
+    mock_asleep, _ = mock_async_responses
+    transport = RetryTransport()
+
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=httpx.ProxyError("Proxy error")):
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(httpx.ProxyError, match="Proxy error"):
+                await client.get("https://example.com")
+
+    assert mock_asleep.call_count == 0
+
+
+def test_retryable_exception(mock_responses: MockResponse) -> None:
+    mock_sleep, _ = mock_responses
+    transport = RetryTransport()
+
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")):
+        with httpx.Client(transport=transport) as client:
+            with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
+                client.get("https://example.com")
+
+    assert mock_sleep.call_count == 10
+
+
+@pytest.mark.asyncio
+async def test_async_retryable_exception(mock_async_responses: AsyncMockResponse) -> None:
+    mock_asleep, _ = mock_async_responses
+    transport = RetryTransport()
+
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=httpx.ReadTimeout("Timeout!")):
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
+                await client.get("https://example.com")
+
+    assert mock_asleep.call_count == 10
+
+
+def test_custom_retryable_exception(mock_responses: MockResponse) -> None:
+    mock_sleep, _ = mock_responses
+
+    retry = Retry(retry_on_exceptions=[httpx.ProxyError])
+    transport = RetryTransport(retry=retry)
+
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ProxyError("Proxy error")):
+        with httpx.Client(transport=transport) as client:
+            with pytest.raises(httpx.ProxyError, match="Proxy error"):
+                client.get("https://example.com")
+
+    assert mock_sleep.call_count == 10
+
+    # Verify other exceptions are not retried
+    transport = RetryTransport(retry=retry)
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")):
+        with httpx.Client(transport=transport) as client:
+            with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
+                client.get("https://example.com")
+
+    assert mock_sleep.call_count == 10  # Count shouldn't increase
 
 
 def test_retries_reset_for_new_request(mock_responses: MockResponse) -> None:

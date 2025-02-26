@@ -113,11 +113,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             try:
                 response = send_method(request)
             except httpx.HTTPError as e:
-                if retry.is_retryable_exception(e):
-                    response = e
-                    continue
-                else:
+                if retry.is_exhausted() or not retry.is_retryable_exception(e):
                     raise
+
+                response = e
+                continue
 
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
@@ -134,13 +134,15 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             if response is not None:
                 await retry.asleep(response)
                 retry = retry.increment()
+
             try:
                 response = await send_method(request)
             except httpx.HTTPError as e:
-                if retry.is_retryable_exception(e):
-                    response = e
-                    continue
-                else:
+                if retry.is_exhausted() or not retry.is_retryable_exception(e):
                     raise
+
+                response = e
+                continue
+
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response

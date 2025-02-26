@@ -229,6 +229,7 @@ class Retry:
             respect_retry_after_header=self.respect_retry_after_header,
             allowed_methods=self.allowed_methods,
             status_forcelist=self.status_forcelist,
+            retry_on_exceptions=self.retryable_exceptions,
             backoff_jitter=self.backoff_jitter,
             attempts_made=self.attempts_made + 1,
         )
