@@ -3,6 +3,7 @@ from http import HTTPStatus
 from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 from httpx import Headers, Response
 
@@ -46,6 +47,12 @@ def test_is_retryable_status_code() -> None:
     retry = Retry()
     assert retry.is_retryable_status_code(429) is True
     assert retry.is_retryable_status_code(404) is False
+
+
+def test_is_retryable_exception() -> None:
+    retry = Retry()
+    assert retry.is_retryable_exception(httpx.NetworkError("")) is True
+    assert retry.is_retryable_exception(httpx.LocalProtocolError("")) is False
 
 
 def test_custom_retryable_methods_str() -> None:

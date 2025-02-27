@@ -103,14 +103,22 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., httpx.Response],
     ) -> httpx.Response:
         retry = self.retry
-        response = None
+        response: Union[httpx.Response, httpx.HTTPError, None] = None
 
         while True:
             if response is not None:
                 retry.sleep(response)
                 retry = retry.increment()
 
-            response = send_method(request)
+            try:
+                response = send_method(request)
+            except httpx.HTTPError as e:
+                if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                    raise
+
+                response = e
+                continue
+
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
 
@@ -120,13 +128,21 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
     ) -> httpx.Response:
         retry = self.retry
-        response = None
+        response: Union[httpx.Response, httpx.HTTPError, None] = None
 
         while True:
             if response is not None:
                 await retry.asleep(response)
                 retry = retry.increment()
 
-            response = await send_method(request)
+            try:
+                response = await send_method(request)
+            except httpx.HTTPError as e:
+                if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                    raise
+
+                response = e
+                continue
+
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
