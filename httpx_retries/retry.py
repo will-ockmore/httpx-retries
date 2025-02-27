@@ -49,6 +49,8 @@ class Retry:
             ["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"].
         status_forcelist (Iterable[http.HTTPStatus, int], optional): The HTTP status codes that can be retried.
             Defaults to [429, 502, 503, 504].
+        retry_on_exceptions (Iterable[Type[httpx.HTTPError]], optional): The HTTP exceptions that can be retried.
+            Defaults to [httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError].
         backoff_jitter (float, optional): The amount of jitter to add to the backoff time, between 0 and 1.
             Defaults to 1 (full jitter).
         attempts_made (int, optional): The number of attempts already made.
