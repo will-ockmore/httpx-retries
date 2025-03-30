@@ -26,6 +26,8 @@ else:  # pragma: no cover
         DELETE = "DELETE"
         OPTIONS = "OPTIONS"
         TRACE = "TRACE"
+        PATCH = "PATCH"
+        CONNECT = "CONNECT"
 
 
 class Retry:
