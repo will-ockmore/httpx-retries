@@ -218,10 +218,14 @@ class Retry:
 
     def sleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
         """Sleep between retry attempts using the calculated duration."""
-        time.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
+        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
+        logger.debug("Retry.sleep seconds=%s", time_to_sleep)
+        time.sleep(time_to_sleep)
 
     async def asleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
         """Sleep between retry attempts asynchronously using the calculated duration."""
+        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
+        logger.debug("Retry.asleep seconds=%s", time_to_sleep)
         await asyncio.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
     def increment(self) -> "Retry":
@@ -237,3 +241,6 @@ class Retry:
             backoff_jitter=self.backoff_jitter,
             attempts_made=self.attempts_made + 1,
         )
+
+    def __repr__(self) -> str:
+        return f"<Retry(total={self.total}, attempts_made={self.attempts_made})>"

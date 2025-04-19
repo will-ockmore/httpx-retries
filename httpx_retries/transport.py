@@ -71,11 +71,16 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._sync_transport is None:
             raise RuntimeError("Synchronous request received but no sync transport available")
 
+        logger.debug("handle_request started request=%s", request)
+
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._sync_transport.handle_request)
             response = self._retry_operation(request, send_method)
         else:
             response = self._sync_transport.handle_request(request)
+
+        logger.debug("handle_request finished request=%s response=%s", request, response)
+
         return response
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
@@ -90,11 +95,16 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._async_transport is None:
             raise RuntimeError("Async request received but no async transport available")
 
+        logger.debug("handle_async_request started request=%s", request)
+
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._async_transport.handle_async_request)
             response = await self._retry_operation_async(request, send_method)
         else:
             response = await self._async_transport.handle_async_request(request)
+
+        logger.debug("handle_async_request finished request=%s response=%s", request, response)
+
         return response
 
     def _retry_operation(
@@ -110,6 +120,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 retry.sleep(response)
                 retry = retry.increment()
 
+                logger.debug("_retry_operation response=%s retry=%s", response, retry)
             try:
                 response = send_method(request)
             except httpx.HTTPError as e:
@@ -135,6 +146,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 await retry.asleep(response)
                 retry = retry.increment()
 
+                logger.debug("_retry_operation_async response=%s retry=%s", response, retry)
             try:
                 response = await send_method(request)
             except httpx.HTTPError as e:

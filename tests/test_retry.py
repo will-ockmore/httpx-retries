@@ -1,4 +1,5 @@
 import datetime
+import logging
 from http import HTTPStatus
 from typing import List
 from unittest.mock import AsyncMock, MagicMock
@@ -167,6 +168,14 @@ def test_sleep_respects_retry_after_header(mock_sleep: MagicMock) -> None:
     mock_sleep.assert_called_with(5.0)
 
 
+def test_sleep_logs_sleep_time(mock_sleep: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry()
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    retry.sleep(response)
+    assert "Retry.sleep seconds=5.0" in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock) -> None:
     retry = Retry()
@@ -174,6 +183,15 @@ async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock) -> Non
     await retry.asleep(response)
     assert mock_asleep.call_count == 1
     mock_asleep.assert_called_with(5.0)
+
+
+@pytest.mark.asyncio
+async def test_asleep_logs_sleep_time(mock_asleep: AsyncMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry()
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    await retry.asleep(response)
+    assert "Retry.asleep seconds=5.0" in caplog.text
 
 
 def test_calculate_sleep_returns_immediately_by_default() -> None:
