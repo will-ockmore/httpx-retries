@@ -173,7 +173,7 @@ def test_sleep_logs_sleep_time(mock_sleep: MagicMock, caplog: pytest.LogCaptureF
     retry = Retry()
     response = Response(status_code=429, headers={"Retry-After": "5"})
     retry.sleep(response)
-    assert "Retry.sleep seconds=5.0" in caplog.text
+    assert "sleep seconds=5.0" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -191,7 +191,7 @@ async def test_asleep_logs_sleep_time(mock_asleep: AsyncMock, caplog: pytest.Log
     retry = Retry()
     response = Response(status_code=429, headers={"Retry-After": "5"})
     await retry.asleep(response)
-    assert "Retry.asleep seconds=5.0" in caplog.text
+    assert "asleep seconds=5.0" in caplog.text
 
 
 def test_calculate_sleep_returns_immediately_by_default() -> None:
