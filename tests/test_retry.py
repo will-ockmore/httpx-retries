@@ -216,6 +216,14 @@ def test_calculate_sleep_with_backoff() -> None:
         assert sleep_time <= max_expected
 
 
+def test_calculate_sleep_falls_back_to_backoff_if_retry_after_is_in_the_past() -> None:
+    retry = Retry(backoff_factor=2, attempts_made=2)
+    headers = Headers({"Retry-After": "0"})
+    sleep_time = retry._calculate_sleep(headers)
+    assert sleep_time != 0
+    assert sleep_time <= 2 * (2 ** (2))
+
+
 def test_calculate_sleep_max_backoff() -> None:
     retry = Retry(backoff_factor=2, max_backoff_wait=5)
     headers = Headers({})
