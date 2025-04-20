@@ -1,7 +1,7 @@
 # Retry Behaviour
 
 <p align="center" style="margin: 0 0 10px">
-  <img width="350" height="208" src="https://raw.githubusercontent.com/will-ockmore/httpx-retries/master/docs/img/mario_bros_retry.png" alt='game over: retry'>
+  <img width="350" height="208" src="https://raw.githubusercontent.com/will-ockmore/httpx-retries/master/docs/img/mario_bros_retry.png" alt='The game over screen for mario brothers, showing "continue" and "retry" options'>
 </p>
 
 If you haven't seen them before, it's not immedately clear what terms like _exponential backoff_ and _jitter_  mean. And what exactly is a "retry strategy", anyway? In this guide we'll break down each of these concepts, show why the defaults have been chosen, and explain how you can configure a custom approach for your retries.
