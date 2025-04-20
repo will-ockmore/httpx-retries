@@ -263,6 +263,15 @@ def test_increment() -> None:
     assert new_retry.status_forcelist == retry.status_forcelist
 
 
+def test_increment_logs(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry(total=3)
+    new_retry = retry.increment()
+    assert "increment retry=<Retry(total=3, attempts_made=0)> new_attempts_made=1" in caplog.text
+    new_retry.increment()
+    assert "increment retry=<Retry(total=3, attempts_made=1)> new_attempts_made=2" in caplog.text
+
+
 def test_retry_validation_negative_total() -> None:
     with pytest.raises(ValueError, match="total must be non-negative"):
         Retry(total=-1)
