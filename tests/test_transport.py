@@ -287,11 +287,10 @@ def test_transport_logs_retry_operation(mock_responses: MockResponse, caplog: py
 
     assert len(records) == 10
     assert records[0].message == (
-        "_retry_operation retrying response=<Response [429 Too Many Requests]> retry=<Retry(total=10, attempts_made=1)>"
+        "_retry_operation retrying response=<Response [429 Too Many Requests]> retry=<Retry(total=10, attempts_made=0)>"
     )
     assert records[-1].message == (
-        "_retry_operation retrying response=<Response [429 Too Many Requests]> "
-        "retry=<Retry(total=10, attempts_made=10)>"
+        "_retry_operation retrying response=<Response [429 Too Many Requests]> retry=<Retry(total=10, attempts_made=9)>"
     )
 
 
@@ -312,11 +311,11 @@ async def test_async_retry_operation_logs(
     assert len(records) == 10
     assert records[0].message == (
         "_retry_operation_async retrying response=<Response [429 Too Many Requests]> "
-        "retry=<Retry(total=10, attempts_made=1)>"
+        "retry=<Retry(total=10, attempts_made=0)>"
     )
     assert records[-1].message == (
         "_retry_operation_async retrying response=<Response [429 Too Many Requests]> "
-        "retry=<Retry(total=10, attempts_made=10)>"
+        "retry=<Retry(total=10, attempts_made=9)>"
     )
 
 
