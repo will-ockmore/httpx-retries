@@ -7,6 +7,7 @@ repo_name: will-ockmore/httpx-retries
 nav:
   - Home: index.md
   - Guides:
+      - Retry Behaviour: behaviour.md
       - Logging: logging.md
   - API: api.md
   - Contributing: contributing.md
@@ -37,5 +38,6 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - footnotes
   - codehilite:
       css_class: highlight
