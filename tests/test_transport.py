@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator, Generator
 from typing import Dict, Optional, Union
 from unittest.mock import AsyncMock, MagicMock, call, patch
@@ -97,6 +98,23 @@ def test_successful_request(mock_responses: MockResponse) -> None:
     assert mock_sleep.call_count == 0
 
 
+def test_successful_request_logs(mock_responses: MockResponse, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_sleep, _ = mock_responses
+    transport = RetryTransport()
+
+    with httpx.Client(transport=transport) as client:
+        response = client.get("https://example.com")
+
+    assert response.status_code == 200
+    assert mock_sleep.call_count == 0
+    assert "handle_request started request=<Request('GET', 'https://example.com')>" in caplog.text
+    assert (
+        "handle_request finished request=<Request('GET', 'https://example.com')> response=<Response [200 OK]>"
+        in caplog.text
+    )
+
+
 def test_failed_request(mock_responses: MockResponse) -> None:
     mock_sleep, status_code_sequences = mock_responses
     status_code_sequences["https://example.com/fail"] = status_codes([(429, None)])
@@ -183,6 +201,26 @@ async def test_async_retryable_exception(mock_async_responses: AsyncMockResponse
     assert mock_asleep.call_count == 10
 
 
+@pytest.mark.asyncio
+async def test_successful_async_request_logs(
+    mock_async_responses: AsyncMockResponse, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_asleep, _ = mock_async_responses
+    transport = RetryTransport()
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.get("https://example.com")
+
+    assert response.status_code == 200
+    assert mock_asleep.call_count == 0
+    assert "handle_async_request started request=<Request('GET', 'https://example.com')>" in caplog.text
+    assert (
+        "handle_async_request finished request=<Request('GET', 'https://example.com')> response=<Response [200 OK]>"
+        in caplog.text
+    )
+
+
 def test_custom_retryable_exception(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
 
@@ -233,6 +271,52 @@ def test_retry_respects_retry_after_header(mock_responses: MockResponse) -> None
 
     assert mock_sleep.call_count == 10
     mock_sleep.assert_has_calls([call(5)] * 10)
+
+
+def test_transport_logs_retry_operation(mock_responses: MockResponse, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_sleep, status_code_sequences = mock_responses
+    status_code_sequences["https://example.com/fail"] = status_codes([(429, "5")])
+    transport = RetryTransport()
+
+    with httpx.Client(transport=transport) as client:
+        response = client.get("https://example.com/fail")
+        assert response.status_code == 429
+
+    records = [r for r in caplog.records if r.message.startswith("_retry_operation")]
+
+    assert len(records) == 10
+    assert records[0].message == (
+        "_retry_operation retrying response=<Response [429 Too Many Requests]> retry=<Retry(total=10, attempts_made=0)>"
+    )
+    assert records[-1].message == (
+        "_retry_operation retrying response=<Response [429 Too Many Requests]> retry=<Retry(total=10, attempts_made=9)>"
+    )
+
+
+@pytest.mark.asyncio
+async def test_async_retry_operation_logs(
+    mock_async_responses: AsyncMockResponse, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_asleep, status_code_sequences = mock_async_responses
+    status_code_sequences["https://example.com/fail"] = astatus_codes([(429, "5")])
+    transport = RetryTransport()
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.get("https://example.com/fail")
+        assert response.status_code == 429
+
+    records = [r for r in caplog.records if r.message.startswith("_retry_operation_async")]
+    assert len(records) == 10
+    assert records[0].message == (
+        "_retry_operation_async retrying response=<Response [429 Too Many Requests]> "
+        "retry=<Retry(total=10, attempts_made=0)>"
+    )
+    assert records[-1].message == (
+        "_retry_operation_async retrying response=<Response [429 Too Many Requests]> "
+        "retry=<Retry(total=10, attempts_made=9)>"
+    )
 
 
 @pytest.mark.asyncio

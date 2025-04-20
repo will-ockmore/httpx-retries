@@ -55,7 +55,7 @@ class Retry:
             Defaults to [httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError].
         backoff_jitter (float, optional): The amount of jitter to add to the backoff time, between 0 and 1.
             Defaults to 1 (full jitter).
-        attempts_made (int, optional): The number of attempts already made.
+        attempts_made (int, optional): The number of retry attempts already made.
     """
 
     RETRYABLE_METHODS: Final[frozenset[HTTPMethod]] = frozenset(
@@ -209,7 +209,9 @@ class Retry:
             retry_after = headers.get("Retry-After", "").strip()
             if retry_after:
                 try:
-                    return min(self.parse_retry_after(retry_after), self.max_backoff_wait)
+                    retry_after_sleep = min(self.parse_retry_after(retry_after), self.max_backoff_wait)
+                    if retry_after_sleep > 0:
+                        return retry_after_sleep
                 except ValueError:
                     logger.warning("Retry-After header is not a valid HTTP date: %s", retry_after)
 
@@ -217,15 +219,32 @@ class Retry:
         return self.backoff_strategy() if self.attempts_made > 0 else 0.0
 
     def sleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
-        """Sleep between retry attempts using the calculated duration."""
-        time.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
+        """
+        Sleep between retry attempts using the calculated duration.
+
+        This method will respect a server’s `Retry-After` response header and sleep the duration
+        of the time requested. If that is not present, it will use an exponential backoff. By default,
+        the backoff factor is 0 and this method will return immediately.
+        """
+        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
+        logger.debug("sleep seconds=%s", time_to_sleep)
+        time.sleep(time_to_sleep)
 
     async def asleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
-        """Sleep between retry attempts asynchronously using the calculated duration."""
+        """
+        Sleep between retry attempts asynchronously using the calculated duration.
+
+        This method will respect a server’s `Retry-After` response header and sleep the duration
+        of the time requested. If that is not present, it will use an exponential backoff. By default,
+        the backoff factor is 0 and this method will return immediately.
+        """
+        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
+        logger.debug("asleep seconds=%s", time_to_sleep)
         await asyncio.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
 
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
+        logger.debug("increment retry=%s new_attempts_made=%s", self, self.attempts_made + 1)
         return Retry(
             total=self.total,
             max_backoff_wait=self.max_backoff_wait,
@@ -237,3 +256,6 @@ class Retry:
             backoff_jitter=self.backoff_jitter,
             attempts_made=self.attempts_made + 1,
         )
+
+    def __repr__(self) -> str:
+        return f"<Retry(total={self.total}, attempts_made={self.attempts_made})>"

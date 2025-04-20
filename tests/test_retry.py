@@ -1,4 +1,5 @@
 import datetime
+import logging
 from http import HTTPStatus
 from typing import List
 from unittest.mock import AsyncMock, MagicMock
@@ -167,6 +168,14 @@ def test_sleep_respects_retry_after_header(mock_sleep: MagicMock) -> None:
     mock_sleep.assert_called_with(5.0)
 
 
+def test_sleep_logs_sleep_time(mock_sleep: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry()
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    retry.sleep(response)
+    assert "sleep seconds=5.0" in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock) -> None:
     retry = Retry()
@@ -174,6 +183,15 @@ async def test_asleep_respects_retry_after_header(mock_asleep: AsyncMock) -> Non
     await retry.asleep(response)
     assert mock_asleep.call_count == 1
     mock_asleep.assert_called_with(5.0)
+
+
+@pytest.mark.asyncio
+async def test_asleep_logs_sleep_time(mock_asleep: AsyncMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry()
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    await retry.asleep(response)
+    assert "asleep seconds=5.0" in caplog.text
 
 
 def test_calculate_sleep_returns_immediately_by_default() -> None:
@@ -196,6 +214,14 @@ def test_calculate_sleep_with_backoff() -> None:
         # With full jitter, the actual sleep time will be between 0 and this value
         max_expected = 2 * (2 ** (i))
         assert sleep_time <= max_expected
+
+
+def test_calculate_sleep_falls_back_to_backoff_if_retry_after_is_in_the_past() -> None:
+    retry = Retry(backoff_factor=2, attempts_made=2)
+    headers = Headers({"Retry-After": "0"})
+    sleep_time = retry._calculate_sleep(headers)
+    assert sleep_time != 0
+    assert sleep_time <= 2 * (2 ** (2))
 
 
 def test_calculate_sleep_max_backoff() -> None:
@@ -235,6 +261,15 @@ def test_increment() -> None:
     assert new_retry.respect_retry_after_header == retry.respect_retry_after_header
     assert new_retry.allowed_methods == retry.allowed_methods
     assert new_retry.status_forcelist == retry.status_forcelist
+
+
+def test_increment_logs(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    retry = Retry(total=3)
+    new_retry = retry.increment()
+    assert "increment retry=<Retry(total=3, attempts_made=0)> new_attempts_made=1" in caplog.text
+    new_retry.increment()
+    assert "increment retry=<Retry(total=3, attempts_made=1)> new_attempts_made=2" in caplog.text
 
 
 def test_retry_validation_negative_total() -> None:

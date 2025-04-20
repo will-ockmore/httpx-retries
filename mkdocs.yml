@@ -6,6 +6,8 @@ repo_name: will-ockmore/httpx-retries
 
 nav:
   - Home: index.md
+  - Guides:
+      - Logging: logging.md
   - API: api.md
   - Contributing: contributing.md
 
