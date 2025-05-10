@@ -354,7 +354,7 @@ async def test_sync_only_transport() -> None:
         assert response.status_code == 200
 
     # Async fails
-    with pytest.raises(RuntimeError, match="Async request received but no async transport available"):
+    with pytest.raises(RuntimeError, match="Attempted to use transport in an async context, but a sync transport was provided."):
         async with httpx.AsyncClient(transport=transport) as client:
             await client.get("https://example.com")
 
@@ -369,7 +369,7 @@ async def test_async_only_transport() -> None:
         assert response.status_code == 200
 
     # Sync fails
-    with pytest.raises(RuntimeError, match="Synchronous request received but no sync transport available"):
+    with pytest.raises(RuntimeError, match="Attempted to use transport in a sync context, but an async transport was provided."):
         with httpx.Client(transport=transport) as client:
             client.get("https://example.com")
 

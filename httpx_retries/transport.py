@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound="RetryTransport")
 
 
-class RetryTransport(httpx.BaseTransport):
+class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):  # type: ignore[misc]
     """
     A transport that automatically retries requests.
 
@@ -116,7 +116,7 @@ class RetryTransport(httpx.BaseTransport):
 
     def __enter__(self: T) -> T:
         if not self._sync_transport:
-            raise RuntimeError("Attempted to __enter__ but no sync transport available")
+            raise RuntimeError("Attempted to use transport in a sync context, but an async transport was provided.")
 
         self._sync_transport.__enter__()
 
@@ -132,7 +132,7 @@ class RetryTransport(httpx.BaseTransport):
 
     async def __aenter__(self: T) -> T:
         if not self._async_transport:
-            raise RuntimeError("Attempted to __aenter__ but no async transport available")
+            raise RuntimeError("Attempted to use transport in an async context, but a sync transport was provided.")
 
         await self._async_transport.__aenter__()
         return self
