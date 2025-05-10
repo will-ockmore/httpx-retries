@@ -45,15 +45,24 @@ class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):  # type: ig
     transport = RetryTransport(transport=httpx.HTTPTransport(local_address="0.0.0.0"))
     ```
 
+    If you don't provide a transport, you can pass any arguments you'd pass to the `HTTPTransport` and `AsyncHTTPTransport`
+    constructors as kwargs to [RetryTransport][httpx_retries.RetryTransport].
+
+    ```python
+    transport = RetryTransport(local_address="0.0.0.0")
+    ```
+
     Args:
         transport: Optional transport to wrap. If not provided, async and sync transports are created internally.
         retry: The retry configuration.
+        **kwargs: Kwargs for HTTPTransport and AsyncHTTPTransport
     """
 
     def __init__(
         self,
         transport: Optional[Union[httpx.HTTPTransport, httpx.AsyncHTTPTransport]] = None,
         retry: Optional[Retry] = None,
+        # Kwargs for HTTPTransport and AsyncHTTPTransport
         **kwargs: Any,
     ) -> None:
         self.retry = retry or Retry()
