@@ -1,11 +1,11 @@
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
-from typing import Any, Optional, Union, TYPE_CHECKING
-
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union, cast
 
 if TYPE_CHECKING:
-    import ssl  # pragma: no cover
+    pass  # pragma: no cover
 
 import httpx
 
@@ -13,8 +13,10 @@ from .retry import Retry as Retry
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bound="RetryTransport")
 
-class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):
+
+class RetryTransport(httpx.BaseTransport):
     """
     A transport that automatically retries requests.
 
@@ -52,19 +54,7 @@ class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):
         self,
         transport: Optional[Union[httpx.HTTPTransport, httpx.AsyncHTTPTransport]] = None,
         retry: Optional[Retry] = None,
-        # HTTPTransport arguments
-        verify: ssl.SSLContext | str | bool = True,
-        cert: CertTypes | None = None,
-        trust_env: bool = True,
-        http1: bool = True,
-        http2: bool = False,
-        limits: Limits = DEFAULT_LIMITS,
-        proxy: ProxyTypes | None = None,
-        uds: str | None = None,
-        local_address: str | None = None,
-        retries: int = 0,
-        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
-
+        **kwargs: Any,
     ) -> None:
         self.retry = retry or Retry()
 
@@ -72,8 +62,8 @@ class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):
             self._sync_transport = transport if isinstance(transport, httpx.HTTPTransport) else None
             self._async_transport = transport if isinstance(transport, httpx.AsyncHTTPTransport) else None
         else:
-            self._sync_transport = httpx.HTTPTransport()
-            self._async_transport = httpx.AsyncHTTPTransport()
+            self._sync_transport = httpx.HTTPTransport(**kwargs)
+            self._async_transport = httpx.AsyncHTTPTransport(**kwargs)
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         """
@@ -123,6 +113,47 @@ class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):
         logger.debug("handle_async_request finished request=%s response=%s", request, response)
 
         return response
+
+    def __enter__(self: T) -> T:
+        if not self._sync_transport:
+            raise RuntimeError("Attempted to __enter__ but no sync transport available")
+
+        self._sync_transport.__enter__()
+
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
+        return cast(httpx.HTTPTransport, self._sync_transport).__exit__(exc_type, exc_value, traceback)
+
+    async def __aenter__(self: T) -> T:
+        if not self._async_transport:
+            raise RuntimeError("Attempted to __aenter__ but no async transport available")
+
+        await self._async_transport.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
+        await cast(httpx.AsyncHTTPTransport, self._async_transport).__aexit__(exc_type, exc_value, traceback)
+
+    def close(self) -> None:
+        if not self._sync_transport:
+            raise RuntimeError("Attempted to close but no sync transport available")
+        return self._sync_transport.close()
+
+    async def aclose(self) -> None:
+        if not self._async_transport:
+            raise RuntimeError("Attempted to aclose but no async transport available")
+        return await self._async_transport.aclose()
 
     def _retry_operation(
         self,
