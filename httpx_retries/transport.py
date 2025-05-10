@@ -1,7 +1,11 @@
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    import ssl  # pragma: no cover
 
 import httpx
 
@@ -10,7 +14,7 @@ from .retry import Retry as Retry
 logger = logging.getLogger(__name__)
 
 
-class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
+class RetryTransport(httpx.HTTPTransport, httpx.AsyncHTTPTransport):
     """
     A transport that automatically retries requests.
 
@@ -48,6 +52,19 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         self,
         transport: Optional[Union[httpx.HTTPTransport, httpx.AsyncHTTPTransport]] = None,
         retry: Optional[Retry] = None,
+        # HTTPTransport arguments
+        verify: ssl.SSLContext | str | bool = True,
+        cert: CertTypes | None = None,
+        trust_env: bool = True,
+        http1: bool = True,
+        http2: bool = False,
+        limits: Limits = DEFAULT_LIMITS,
+        proxy: ProxyTypes | None = None,
+        uds: str | None = None,
+        local_address: str | None = None,
+        retries: int = 0,
+        socket_options: typing.Iterable[SOCKET_OPTION] | None = None,
+
     ) -> None:
         self.retry = retry or Retry()
 
