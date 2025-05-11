@@ -77,12 +77,12 @@ def mock_async_responses(mock_asleep: AsyncMock) -> Generator[AsyncMockResponse,
         yield mock_asleep, status_code_sequences
 
 
-class MockHTTPTransport(httpx.HTTPTransport):
+class MockHTTPTransport(httpx.BaseTransport):
     def handle_request(self, request: Request) -> Response:
         return create_response(request, 200)
 
 
-class MockAsyncHTTPTransport(httpx.AsyncHTTPTransport):
+class MockAsyncHTTPTransport(httpx.AsyncBaseTransport):
     async def handle_async_request(self, request: Request) -> Response:
         return create_response(request, 200)
 
