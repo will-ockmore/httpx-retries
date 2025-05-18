@@ -46,14 +46,14 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
     def __init__(
         self,
-        transport: Optional[Union[httpx.HTTPTransport, httpx.AsyncHTTPTransport]] = None,
+        transport: Optional[Union[httpx.BaseTransport, httpx.AsyncBaseTransport]] = None,
         retry: Optional[Retry] = None,
     ) -> None:
         self.retry = retry or Retry()
 
         if transport is not None:
-            self._sync_transport = transport if isinstance(transport, httpx.HTTPTransport) else None
-            self._async_transport = transport if isinstance(transport, httpx.AsyncHTTPTransport) else None
+            self._sync_transport = transport if isinstance(transport, httpx.BaseTransport) else None
+            self._async_transport = transport if isinstance(transport, httpx.AsyncBaseTransport) else None
         else:
             self._sync_transport = httpx.HTTPTransport()
             self._async_transport = httpx.AsyncHTTPTransport()

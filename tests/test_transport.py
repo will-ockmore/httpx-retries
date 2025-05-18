@@ -87,6 +87,16 @@ class MockAsyncHTTPTransport(httpx.AsyncHTTPTransport):
         return create_response(request, 200)
 
 
+class MockTransport(httpx.BaseTransport):
+    def handle_request(self, request: Request) -> Response:
+        return create_response(request, 200)
+
+
+class MockAsyncTransport(httpx.AsyncBaseTransport):
+    async def handle_async_request(self, request: Request) -> Response:
+        return create_response(request, 200)
+
+
 def test_successful_request(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
     transport = RetryTransport()
@@ -385,3 +395,21 @@ async def test_async_unretryable_method(mock_async_responses: AsyncMockResponse)
         assert response.status_code == 429
 
     assert mock_asleep.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_sync_from_base_transport() -> None:
+    transport = RetryTransport(transport=MockTransport())
+
+    with httpx.Client(transport=transport) as client:
+        response = client.get("https://example.com")
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_async_from_base_transport() -> None:
+    transport = RetryTransport(transport=MockAsyncTransport())
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.get("https://example.com")
+        assert response.status_code == 200
