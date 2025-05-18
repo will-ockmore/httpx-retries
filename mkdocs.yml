@@ -9,6 +9,7 @@ nav:
   - Guides:
       - Retry Behaviour: behaviour.md
       - Logging: logging.md
+  - FAQs: faq.md
   - API: api.md
   - Contributing: contributing.md
 
