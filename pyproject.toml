@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "httpx-retries"
-version = "0.3.2"
+version = "0.4.0"
 description = "A retry layer for HTTPX."
 requires-python = ">=3.9"
 authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
