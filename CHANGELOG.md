@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2025-05-18
 
+### Added
+- Added FAQs section to the docs.
+
 ### Fixed
 - Loosen the restriction on `transport` when initializing `RetryTransport`, so that downstream transports can extend
 from `httpx.BaseTransport` and `httpx.AsyncBaseTransport`.
