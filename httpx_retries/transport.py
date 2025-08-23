@@ -117,7 +117,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         while True:
             if response is not None:
-                logger.debug("_retry_operation retrying response=%s retry=%s", response, retry)
+                logger.debug("_retry_operation retrying request=%s response=%s retry=%s", request, response, retry)
                 retry = retry.increment()
                 retry.sleep(response)
             try:
@@ -142,7 +142,9 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         while True:
             if response is not None:
-                logger.debug("_retry_operation_async retrying response=%s retry=%s", response, retry)
+                logger.debug(
+                    "_retry_operation_async retrying request=%s response=%s retry=%s", request, response, retry
+                )
                 retry = retry.increment()
                 await retry.asleep(response)
             try:
