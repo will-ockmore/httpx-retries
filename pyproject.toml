@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "A retry layer for HTTPX."
 requires-python = ">=3.9"
 authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
-dependencies = ["httpx>=0.27.0"]
+dependencies = ["httpx>=0.20.0"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

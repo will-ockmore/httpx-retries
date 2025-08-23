@@ -320,7 +320,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "httpx", specifier = ">=0.27.0" }]
+requires-dist = [{ name = "httpx", specifier = ">=0.20.0" }]
 
 [package.metadata.requires-dev]
 dev = [
