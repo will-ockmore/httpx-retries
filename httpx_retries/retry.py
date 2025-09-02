@@ -109,9 +109,7 @@ class Retry:
         self.allowed_methods = frozenset(
             HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
         )
-        self.status_forcelist = frozenset(
-            HTTPStatus(int(code)) for code in (status_forcelist or self.RETRYABLE_STATUS_CODES)
-        )
+        self.status_forcelist = frozenset((status_forcelist or self.RETRYABLE_STATUS_CODES))
         self.retryable_exceptions = (
             self.RETRYABLE_EXCEPTIONS if retry_on_exceptions is None else tuple(retry_on_exceptions)
         )
@@ -122,7 +120,7 @@ class Retry:
 
     def is_retryable_status_code(self, status_code: int) -> bool:
         """Check if a status code is retryable."""
-        return HTTPStatus(status_code) in self.status_forcelist
+        return status_code in self.status_forcelist
 
     def is_retryable_exception(self, exception: httpx.HTTPError) -> bool:
         """Check if an exception is retryable."""

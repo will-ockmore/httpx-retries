@@ -80,6 +80,14 @@ def test_custom_retry_status_codes_enum() -> None:
     assert retry.is_retryable_status_code(502) is False
 
 
+def test_custom_retry_status_codes_non_standard() -> None:
+    retry = Retry(status_forcelist=[523, 599])
+    assert retry.is_retryable_status_code(523) is True
+    assert retry.is_retryable_status_code(599) is True
+    assert retry.is_retryable_status_code(500) is False
+    assert retry.is_retryable_status_code(502) is False
+
+
 def test_is_exhausted() -> None:
     retry = Retry(total=3)
     assert retry.is_exhausted() is False
