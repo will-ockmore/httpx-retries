@@ -56,6 +56,15 @@ def test_is_retryable_exception() -> None:
     assert retry.is_retryable_exception(httpx.LocalProtocolError("")) is False
 
 
+def test_is_retryable_exception_custom_exception() -> None:
+    class MyExc(Exception):
+        pass
+
+    retry = Retry(retry_on_exceptions=(MyExc,))
+    assert retry.is_retryable_exception(httpx.NetworkError("")) is False
+    assert retry.is_retryable_exception(MyExc()) is True
+
+
 def test_custom_retryable_methods_str() -> None:
     retry = Retry(allowed_methods=["POST"])
     assert retry.is_retryable_method("POST") is True

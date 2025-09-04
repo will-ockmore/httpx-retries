@@ -198,14 +198,39 @@ def test_retryable_exception(mock_responses: MockResponse) -> None:
     assert mock_sleep.call_count == 10
 
 
+def test_retryable_exception_custom_exception(mock_responses: MockResponse) -> None:
+    mock_sleep, _ = mock_responses
+    transport = RetryTransport(retry=Retry(retry_on_exceptions=[ValueError]))
+
+    with patch("httpx.HTTPTransport.handle_request", side_effect=ValueError("oops")):
+        with httpx.Client(transport=transport) as client:
+            with pytest.raises(ValueError, match="oops"):
+                client.get("https://example.com")
+
+    assert mock_sleep.call_count == 10
+
+
 @pytest.mark.asyncio
 async def test_async_retryable_exception(mock_async_responses: AsyncMockResponse) -> None:
     mock_asleep, _ = mock_async_responses
     transport = RetryTransport()
 
-    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=httpx.ReadTimeout("Timeout!")):
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=httpx.ReadTimeout("oops")):
         async with httpx.AsyncClient(transport=transport) as client:
-            with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
+            with pytest.raises(httpx.ReadTimeout, match="oops"):
+                await client.get("https://example.com")
+
+    assert mock_asleep.call_count == 10
+
+
+@pytest.mark.asyncio
+async def test_async_retryable_exception_custom_exception(mock_async_responses: AsyncMockResponse) -> None:
+    mock_asleep, _ = mock_async_responses
+    transport = RetryTransport(retry=Retry(retry_on_exceptions=[ValueError]))
+
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=ValueError("Timeout!")):
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(ValueError, match="Timeout!"):
                 await client.get("https://example.com")
 
     assert mock_asleep.call_count == 10

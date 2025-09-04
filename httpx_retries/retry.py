@@ -69,7 +69,7 @@ class Retry:
             HTTPStatus.GATEWAY_TIMEOUT,
         ]
     )
-    RETRYABLE_EXCEPTIONS: Final[Tuple[Type[httpx.HTTPError], ...]] = (
+    RETRYABLE_EXCEPTIONS: Final[Tuple[Type[Exception], ...]] = (
         httpx.TimeoutException,
         httpx.NetworkError,
         httpx.RemoteProtocolError,
@@ -80,7 +80,7 @@ class Retry:
         total: int = 10,
         allowed_methods: Optional[Iterable[Union[HTTPMethod, str]]] = None,
         status_forcelist: Optional[Iterable[Union[HTTPStatus, int]]] = None,
-        retry_on_exceptions: Optional[Iterable[Type[httpx.HTTPError]]] = None,
+        retry_on_exceptions: Optional[Iterable[Type[Exception]]] = None,
         backoff_factor: float = 0.0,
         respect_retry_after_header: bool = True,
         max_backoff_wait: float = 120.0,
@@ -122,7 +122,7 @@ class Retry:
         """Check if a status code is retryable."""
         return status_code in self.status_forcelist
 
-    def is_retryable_exception(self, exception: httpx.HTTPError) -> bool:
+    def is_retryable_exception(self, exception: Exception) -> bool:
         """Check if an exception is retryable."""
         return isinstance(exception, self.retryable_exceptions)
 
@@ -216,7 +216,7 @@ class Retry:
         # Fall back to backoff strategy
         return self.backoff_strategy() if self.attempts_made > 0 else 0.0
 
-    def sleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
+    def sleep(self, response: Union[httpx.Response, Exception]) -> None:
         """
         Sleep between retry attempts using the calculated duration.
 
@@ -228,7 +228,7 @@ class Retry:
         logger.debug("sleep seconds=%s", time_to_sleep)
         time.sleep(time_to_sleep)
 
-    async def asleep(self, response: Union[httpx.Response, httpx.HTTPError]) -> None:
+    async def asleep(self, response: Union[httpx.Response, Exception]) -> None:
         """
         Sleep between retry attempts asynchronously using the calculated duration.
 
