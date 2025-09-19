@@ -58,6 +58,20 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             self._sync_transport = httpx.HTTPTransport()
             self._async_transport = httpx.AsyncHTTPTransport()
 
+    def close(self) -> None:
+        """
+        Closes this transport.
+        """
+        if self._sync_transport is not None:
+            self._sync_transport.close()
+
+    async def aclose(self) -> None:
+        """
+        Closes this transport.
+        """
+        if self._async_transport is not None:
+            await self._async_transport.aclose()
+
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         """
         Sends an HTTP request, possibly with retries.
