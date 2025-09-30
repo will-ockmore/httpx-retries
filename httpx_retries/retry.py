@@ -243,7 +243,7 @@ class Retry:
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
         logger.debug("increment retry=%s new_attempts_made=%s", self, self.attempts_made + 1)
-        return Retry(
+        return self.__class__(
             total=self.total,
             max_backoff_wait=self.max_backoff_wait,
             backoff_factor=self.backoff_factor,
