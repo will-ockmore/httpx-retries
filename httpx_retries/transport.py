@@ -131,7 +131,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         while True:
             if response is not None:
-                if isinstance(response, httpx.Response) and response.is_server_error:
+                if isinstance(response, httpx.Response):
                     response.close()
 
                 logger.debug("_retry_operation retrying request=%s response=%s retry=%s", request, response, retry)
@@ -159,7 +159,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         while True:
             if response is not None:
-                if isinstance(response, httpx.Response) and response.is_server_error:
+                if isinstance(response, httpx.Response):
                     await response.aclose()
 
                 logger.debug(
