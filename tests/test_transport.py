@@ -1,7 +1,7 @@
 import logging
 from collections.abc import AsyncGenerator, Generator
 from typing import Dict, Optional, Union
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import httpx
 import pytest
@@ -208,6 +208,26 @@ def test_retryable_exception_custom_exception(mock_responses: MockResponse) -> N
                 client.get("https://example.com")
 
     assert mock_sleep.call_count == 10
+
+
+@pytest.mark.parametrize("status_code", Retry.RETRYABLE_STATUS_CODES)
+def test_retry_operation_always_closes_response(status_code: int) -> None:
+    transport = RetryTransport()
+
+    responses = []
+
+    def send_method(request: httpx.Request) -> httpx.Response:
+        response = Mock(spec=httpx.Response)
+        response.status_code = status_code
+        response.headers = httpx.Headers()
+        response.close = Mock()
+
+        responses.append(response)
+        return response
+
+    transport._retry_operation(request=httpx.Request("GET", "https://example.com"), send_method=send_method)
+
+    assert all(r.close.called for r in responses[:-1])
 
 
 @pytest.mark.asyncio
@@ -440,3 +460,24 @@ async def test_async_from_base_transport() -> None:
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.get("https://example.com")
         assert response.status_code == 200
+
+
+@pytest.mark.parametrize("status_code", Retry.RETRYABLE_STATUS_CODES)
+@pytest.mark.asyncio
+async def test_retry_operation_async_always_closes_response(status_code: int) -> None:
+    transport = RetryTransport()
+
+    responses = []
+
+    async def send_method(request: httpx.Request) -> httpx.Response:
+        response = AsyncMock(spec=httpx.Response)
+        response.status_code = status_code
+        response.headers = httpx.Headers()
+        response.aclose = AsyncMock()
+
+        responses.append(response)
+        return response
+
+    await transport._retry_operation_async(request=httpx.Request("GET", "https://example.com"), send_method=send_method)
+
+    assert all(r.aclose.called for r in responses[:-1])
