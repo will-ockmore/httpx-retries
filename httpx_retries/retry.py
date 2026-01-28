@@ -238,7 +238,7 @@ class Retry:
         """
         time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
         logger.debug("asleep seconds=%s", time_to_sleep)
-        await asyncio.sleep(self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {}))
+        await asyncio.sleep(time_to_sleep)
 
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
