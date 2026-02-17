@@ -9,6 +9,7 @@ nav:
   - Guides:
       - Retry Behaviour: behaviour.md
       - Logging: logging.md
+      - Differences With Other Retry Libraries: differences_with_other_retry_libraries.md
   - FAQs: faq.md
   - API: api.md
   - Contributing: contributing.md

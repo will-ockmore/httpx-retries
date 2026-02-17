@@ -93,6 +93,15 @@ To make it easy to migrate, the API surface is almost identical to `Retry` from 
 - `backoff_strategy` can be overridden to customize backoff behavior.
 - Some options that are not strictly retry-related are not included (`raise_on_status`, `raise_on_redirect`)
 
+## Differences with other retry libraries
+
+HTTPX Retries tries to make configuring retries simple and centralised, for the case of request / response.
+Other libraries are general purpose, which is good if you need to have a fully custom retry strategy.
+Usually though, most programs need a set of sensible defaults, configured once.
+
+Take a look at the [comparison with other libraries](https://will-ockmore.github.io/httpx-retries/differences_with_other_retry_libraries/)
+in the documentation.
+
 ## Contributing
 
 If you want to contribute to the project, check out the [Contributing Guide](https://will-ockmore.github.io/httpx-retries/contributing/).
