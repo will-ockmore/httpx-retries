@@ -106,8 +106,8 @@ class Retry:
         self.backoff_jitter = backoff_jitter
         self.attempts_made = attempts_made
 
-        self.allowed_methods = frozenset(
-            HTTPMethod(method.upper()) for method in (allowed_methods or self.RETRYABLE_METHODS)
+        self.allowed_methods: frozenset[str] = frozenset(
+            method.upper() for method in (allowed_methods or self.RETRYABLE_METHODS)
         )
         self.status_forcelist = frozenset((status_forcelist or self.RETRYABLE_STATUS_CODES))
         self.retryable_exceptions = (
@@ -116,7 +116,7 @@ class Retry:
 
     def is_retryable_method(self, method: str) -> bool:
         """Check if a method is retryable."""
-        return HTTPMethod(method.upper()) in self.allowed_methods
+        return method.upper() in self.allowed_methods
 
     def is_retryable_status_code(self, status_code: int) -> bool:
         """Check if a status code is retryable."""

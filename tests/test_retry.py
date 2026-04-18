@@ -77,6 +77,20 @@ def test_custom_retryable_methods_enum() -> None:
     assert retry.is_retryable_method("GET") is False
 
 
+def test_non_standard_method_not_retryable_by_default() -> None:
+    retry = Retry()
+    assert retry.is_retryable_method("PROPFIND") is False
+    assert retry.is_retryable_method("propfind") is False
+
+
+def test_non_standard_method_can_be_configured() -> None:
+    retry = Retry(allowed_methods=["PROPFIND", "GET"])
+    assert retry.is_retryable_method("PROPFIND") is True
+    assert retry.is_retryable_method("propfind") is True
+    assert retry.is_retryable_method("GET") is True
+    assert retry.is_retryable_method("POST") is False
+
+
 def test_custom_retry_status_codes() -> None:
     retry = Retry(status_forcelist=[500])
     assert retry.is_retryable_status_code(500) is True

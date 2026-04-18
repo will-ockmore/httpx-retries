@@ -161,6 +161,31 @@ def test_unretryable_method(mock_responses: MockResponse) -> None:
     assert mock_sleep.call_count == 0
 
 
+def test_non_standard_method_passes_through(mock_responses: MockResponse) -> None:
+    mock_sleep, status_code_sequences = mock_responses
+    status_code_sequences["https://example.com/dav"] = status_codes([(207, None)])
+    transport = RetryTransport()
+
+    with httpx.Client(transport=transport) as client:
+        response = client.request("PROPFIND", "https://example.com/dav")
+        assert response.status_code == 207
+
+    assert mock_sleep.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_async_non_standard_method_passes_through(mock_async_responses: AsyncMockResponse) -> None:
+    mock_asleep, status_code_sequences = mock_async_responses
+    status_code_sequences["https://example.com/dav"] = astatus_codes([(207, None)])
+    transport = RetryTransport()
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.request("PROPFIND", "https://example.com/dav")
+        assert response.status_code == 207
+
+    assert mock_asleep.call_count == 0
+
+
 def test_unretryable_exception(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
     transport = RetryTransport()
