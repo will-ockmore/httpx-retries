@@ -157,7 +157,7 @@ class Retry:
             ValueError: If the Retry-After header is not a valid number or HTTP date.
         """
         retry_after = retry_after.strip()
-        if retry_after.isdigit():
+        if retry_after.isascii() and retry_after.isdigit():
             return float(retry_after)
 
         try:
