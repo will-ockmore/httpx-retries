@@ -46,20 +46,14 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
     def __init__(
         self,
-        transport: Optional[
-            Union[httpx.BaseTransport, httpx.AsyncBaseTransport]
-        ] = None,
+        transport: Optional[Union[httpx.BaseTransport, httpx.AsyncBaseTransport]] = None,
         retry: Optional[Retry] = None,
     ) -> None:
         self.retry = retry or Retry()
 
         if transport is not None:
-            self._sync_transport = (
-                transport if isinstance(transport, httpx.BaseTransport) else None
-            )
-            self._async_transport = (
-                transport if isinstance(transport, httpx.AsyncBaseTransport) else None
-            )
+            self._sync_transport = transport if isinstance(transport, httpx.BaseTransport) else None
+            self._async_transport = transport if isinstance(transport, httpx.AsyncBaseTransport) else None
         else:
             self._sync_transport = httpx.HTTPTransport()
             self._async_transport = httpx.AsyncHTTPTransport()
@@ -89,9 +83,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             The final response.
         """
         if self._sync_transport is None:
-            raise RuntimeError(
-                "Synchronous request received but no sync transport available"
-            )
+            raise RuntimeError("Synchronous request received but no sync transport available")
 
         logger.debug(
             "handle_request started %s %s%s",
@@ -126,9 +118,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
             The final response.
         """
         if self._async_transport is None:
-            raise RuntimeError(
-                "Async request received but no async transport available"
-            )
+            raise RuntimeError("Async request received but no async transport available")
 
         logger.debug(
             "handle_async_request started %s %s%s",
@@ -185,9 +175,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(
-                response.status_code
-            ):
+            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
 
     async def _retry_operation_async(
@@ -222,7 +210,5 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(
-                response.status_code
-            ):
+            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
