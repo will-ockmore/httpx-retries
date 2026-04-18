@@ -85,12 +85,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._sync_transport is None:
             raise RuntimeError("Synchronous request received but no sync transport available")
 
-        logger.debug(
-            "handle_request started %s %s%s",
-            request.method,
-            request.url.host,
-            request.url.path,
-        )
+        logger.debug("handle_request started request=%s", request)
 
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._sync_transport.handle_request)
@@ -98,13 +93,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         else:
             response = self._sync_transport.handle_request(request)
 
-        logger.debug(
-            "handle_request finished %s %s%s response=%s",
-            request.method,
-            request.url.host,
-            request.url.path,
-            response,
-        )
+        logger.debug("handle_request finished request=%s response=%s", request, response)
 
         return response
 
@@ -120,12 +109,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._async_transport is None:
             raise RuntimeError("Async request received but no async transport available")
 
-        logger.debug(
-            "handle_async_request started %s %s%s",
-            request.method,
-            request.url.host,
-            request.url.path,
-        )
+        logger.debug("handle_async_request started request=%s", request)
 
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._async_transport.handle_async_request)
@@ -133,13 +117,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         else:
             response = await self._async_transport.handle_async_request(request)
 
-        logger.debug(
-            "handle_async_request finished %s %s%s response=%s",
-            request.method,
-            request.url.host,
-            request.url.path,
-            response,
-        )
+        logger.debug("handle_async_request finished request=%s response=%s", request, response)
 
         return response
 
@@ -156,14 +134,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 if isinstance(response, httpx.Response):
                     response.close()
 
-                logger.debug(
-                    "_retry_operation retrying %s %s%s response=%s retry=%s",
-                    request.method,
-                    request.url.host,
-                    request.url.path,
-                    response,
-                    retry,
-                )
+                logger.debug("_retry_operation retrying request=%s response=%s retry=%s", request, response, retry)
                 retry = retry.increment()
                 retry.sleep(response)
             try:
@@ -192,12 +163,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                     await response.aclose()
 
                 logger.debug(
-                    "_retry_operation_async retrying %s %s%s response=%s retry=%s",
-                    request.method,
-                    request.url.host,
-                    request.url.path,
-                    response,
-                    retry,
+                    "_retry_operation_async retrying request=%s response=%s retry=%s", request, response, retry
                 )
                 retry = retry.increment()
                 await retry.asleep(response)
