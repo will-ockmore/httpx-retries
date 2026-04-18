@@ -88,12 +88,7 @@ DEBUG [2025-08-23 09:34:27] httpcore.http11 - response_closed.complete
 
 ## Security Note
 
-> **Warning:** DEBUG logging includes full request URLs, including query strings.
-> If your application passes secrets in query strings (API keys, signed URL tokens, etc.),
-> those values will appear in your log output.
->
-> Redact sensitive data at the logging-handler level before enabling DEBUG logging,
-> or use a logger filter to strip query parameters.
->
-> The retry layer multiplies log lines per request (one per attempt), which increases
-> the exposure surface compared to a single request.
+!!! warning
+    DEBUG logging includes full request URLs, including query strings. If your application passes secrets in query strings (API keys, signed URL tokens, etc.), those values will appear in your log output.
+
+Redact sensitive data at the logging-handler level before enabling DEBUG logging, or use a logger filter to strip query parameters.
