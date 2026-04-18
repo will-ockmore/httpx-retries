@@ -69,6 +69,19 @@ To enable this strategy, just set the **backoff_factor** parameter for [Retry][h
 
     Take some time to read the parameters to [Retry][httpx_retries.Retry], to see what's available to tweak; for example, you can change the amount of `jitter` applied.
 
+## Bounding the total wait time
+
+`max_backoff_wait` caps a *single* sleep between attempts; it does **not** cap the cumulative sleep across a request. With the defaults (`total=10`, `max_backoff_wait=120`) and `respect_retry_after_header=True`, a server can return `Retry-After: 120` repeatedly and hold the client for up to `total * max_backoff_wait` (~20 minutes) before the request resolves.
+
+To bound the total time spent sleeping across all retry attempts for a request, set `total_timeout`:
+
+```python
+retry = Retry(total=10, total_timeout=30)
+```
+
+- Each sleep is capped by the remaining budget (`total_timeout - elapsed_sleep`).
+- Once the budget is exhausted, the retry loop short-circuits and returns the last response (or raises the last exception).
+
 ## Configuring a custom strategy
 
 If you want to implement your own retry strategy, you can subclass [Retry][httpx_retries.Retry] and override the [backoff_strategy][httpx_retries.Retry.backoff_strategy] method.
