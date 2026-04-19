@@ -6,3 +6,4 @@ source .venv/bin/activate
 coverage run -m pytest
 coverage report -m
 coverage html
+coverage xml
