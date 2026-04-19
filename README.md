@@ -1,15 +1,28 @@
 # HTTPX Retries
 
-
 <p>
-<a href="https://github.com/will-ockmore/httpx-retry/actions">
-    <img src="https://github.com/will-ockmore/httpx-retry/workflows/Test%20Suite/badge.svg" alt="Test Suite">
+<a href="https://github.com/will-ockmore/httpx-retries/actions">
+    <img src="https://github.com/will-ockmore/httpx-retries/workflows/Test%20Suite/badge.svg" alt="Test Suite">
 </a>
 <a href="https://pypi.org/project/httpx-retries/">
     <img src="https://badge.fury.io/py/httpx-retries.svg" alt="Package version">
 </a>
+<a href="https://pypi.org/project/httpx-retries/">
+    <img src="https://img.shields.io/pypi/pyversions/httpx-retries.svg" alt="Python versions">
+</a>
+<a href="https://pepy.tech/project/httpx-retries">
+    <img src="https://static.pepy.tech/badge/httpx-retries/month" alt="Downloads">
+</a>
+<a href="https://codecov.io/gh/will-ockmore/httpx-retries">
+    <img src="https://codecov.io/gh/will-ockmore/httpx-retries/branch/main/graph/badge.svg" alt="Coverage">
+</a>
+<a href="https://github.com/will-ockmore/httpx-retries/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/will-ockmore/httpx-retries.svg" alt="License">
+</a>
+<a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff">
+</a>
 </p>
-
 <!-- badges-end -->
 
 <em>A retry layer for HTTPX.</em>
