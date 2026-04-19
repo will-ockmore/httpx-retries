@@ -77,6 +77,20 @@ def test_custom_retryable_methods_enum() -> None:
     assert retry.is_retryable_method("GET") is False
 
 
+def test_non_standard_method_not_retryable_by_default() -> None:
+    retry = Retry()
+    assert retry.is_retryable_method("PROPFIND") is False
+    assert retry.is_retryable_method("propfind") is False
+
+
+def test_non_standard_method_can_be_configured() -> None:
+    retry = Retry(allowed_methods=["PROPFIND", "GET"])
+    assert retry.is_retryable_method("PROPFIND") is True
+    assert retry.is_retryable_method("propfind") is True
+    assert retry.is_retryable_method("GET") is True
+    assert retry.is_retryable_method("POST") is False
+
+
 def test_custom_retry_status_codes() -> None:
     retry = Retry(status_forcelist=[500])
     assert retry.is_retryable_status_code(500) is True
@@ -420,3 +434,101 @@ def test_is_retry_custom_configuration() -> None:
     assert retry.is_retry("POST", 404, False) is True
     assert retry.is_retry("GET", 404, False) is False
     assert retry.is_retry("POST", 429, False) is False
+
+
+def test_total_timeout_default_is_none() -> None:
+    retry = Retry()
+    assert retry.total_timeout is None
+    assert retry.elapsed_sleep == 0.0
+
+
+def test_total_timeout_custom() -> None:
+    retry = Retry(total_timeout=30.0)
+    assert retry.total_timeout == 30.0
+
+
+def test_retry_validation_negative_total_timeout() -> None:
+    with pytest.raises(ValueError, match="total_timeout must be positive"):
+        Retry(total_timeout=-1)
+
+
+def test_retry_validation_zero_total_timeout() -> None:
+    with pytest.raises(ValueError, match="total_timeout must be positive"):
+        Retry(total_timeout=0)
+
+
+def test_retry_validation_negative_elapsed_sleep() -> None:
+    with pytest.raises(ValueError, match="elapsed_sleep must be non-negative"):
+        Retry(elapsed_sleep=-0.1)
+
+
+def test_calculate_sleep_capped_by_total_timeout() -> None:
+    retry = Retry(total_timeout=5)
+    headers = Headers({"Retry-After": "10"})
+    assert retry._calculate_sleep(headers) == 5.0
+
+
+def test_calculate_sleep_capped_by_remaining_total_timeout() -> None:
+    retry = Retry(total_timeout=10)
+    retry.elapsed_sleep = 7.0
+    headers = Headers({"Retry-After": "10"})
+    assert retry._calculate_sleep(headers) == 3.0
+
+
+def test_calculate_sleep_zero_when_total_timeout_exhausted() -> None:
+    retry = Retry(total_timeout=5)
+    retry.elapsed_sleep = 5.0
+    headers = Headers({"Retry-After": "10"})
+    assert retry._calculate_sleep(headers) == 0.0
+
+
+def test_calculate_sleep_no_cap_without_total_timeout() -> None:
+    retry = Retry()
+    headers = Headers({"Retry-After": "10"})
+    assert retry._calculate_sleep(headers) == 10.0
+
+
+def test_sleep_updates_elapsed_sleep(mock_sleep: MagicMock) -> None:
+    retry = Retry()
+    assert retry.elapsed_sleep == 0.0
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    retry.sleep(response)
+    assert retry.elapsed_sleep == 5.0
+    retry.sleep(response)
+    assert retry.elapsed_sleep == 10.0
+
+
+@pytest.mark.asyncio
+async def test_asleep_updates_elapsed_sleep(mock_asleep: AsyncMock) -> None:
+    retry = Retry()
+    assert retry.elapsed_sleep == 0.0
+    response = Response(status_code=429, headers={"Retry-After": "5"})
+    await retry.asleep(response)
+    assert retry.elapsed_sleep == 5.0
+    await retry.asleep(response)
+    assert retry.elapsed_sleep == 10.0
+
+
+def test_increment_preserves_total_timeout() -> None:
+    retry = Retry(total_timeout=30.0)
+    new_retry = retry.increment()
+    assert new_retry.total_timeout == 30.0
+
+
+def test_increment_preserves_elapsed_sleep() -> None:
+    retry = Retry(total_timeout=30.0)
+    retry.elapsed_sleep = 12.5
+    new_retry = retry.increment()
+    assert new_retry.elapsed_sleep == 12.5
+
+
+def test_is_exhausted_by_total_timeout() -> None:
+    retry = Retry(total=10, total_timeout=5)
+    retry.elapsed_sleep = 5.0
+    assert retry.is_exhausted() is True
+
+
+def test_is_exhausted_below_total_timeout() -> None:
+    retry = Retry(total=10, total_timeout=5)
+    retry.elapsed_sleep = 4.9
+    assert retry.is_exhausted() is False
