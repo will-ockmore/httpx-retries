@@ -170,6 +170,13 @@ def test_parse_retry_after_invalid() -> None:
         retry.parse_retry_after("invalid")
 
 
+@pytest.mark.parametrize("value", ["\u0665", "\u00b2"])
+def test_parse_retry_after_rejects_non_ascii_digits(value: str) -> None:
+    retry = Retry()
+    with pytest.raises(ValueError, match=f"Invalid Retry-After header: {value}"):
+        retry.parse_retry_after(value)
+
+
 def test_calculate_sleep_with_retry_after() -> None:
     retry = Retry()
     headers = Headers({"Retry-After": "5"})
