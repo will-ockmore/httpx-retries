@@ -2,7 +2,7 @@
 
 <p>
 <a href="https://github.com/will-ockmore/httpx-retries/actions">
-    <img src="https://github.com/will-ockmore/httpx-retries/workflows/Test%20Suite/badge.svg" alt="Test Suite">
+    <img src="https://github.com/will-ockmore/httpx-retries/actions/workflows/test-suite.yml/badge.svg?branch=main" alt="Test Suite">
 </a>
 <a href="https://pypi.org/project/httpx-retries/">
     <img src="https://badge.fury.io/py/httpx-retries.svg" alt="Package version">
