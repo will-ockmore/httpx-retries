@@ -32,9 +32,7 @@ async def astatus_codes(
         yield codes[-1]
 
 
-def create_response(
-    request: Request, status_code: int, retry_after: Optional[str] = None
-) -> Response:
+def create_response(request: Request, status_code: int, retry_after: Optional[str] = None) -> Response:
     """Helper to create a response with the given status code and retry-after header"""
     headers = {"Retry-After": retry_after} if retry_after else {}
     return Response(status_code=status_code, request=request, headers=headers)
@@ -116,9 +114,7 @@ def test_successful_request(mock_responses: MockResponse) -> None:
     assert mock_sleep.call_count == 0
 
 
-def test_successful_request_logs(
-    mock_responses: MockResponse, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_successful_request_logs(mock_responses: MockResponse, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     mock_sleep, _ = mock_responses
     transport = RetryTransport()
@@ -128,10 +124,7 @@ def test_successful_request_logs(
 
     assert response.status_code == 200
     assert mock_sleep.call_count == 0
-    assert (
-        "handle_request started request=<Request('GET', 'https://example.com')>"
-        in caplog.text
-    )
+    assert "handle_request started request=<Request('GET', 'https://example.com')>" in caplog.text
     assert (
         "handle_request finished request=<Request('GET', 'https://example.com')> response=<Response [200 OK]>"
         in caplog.text
@@ -152,9 +145,7 @@ def test_failed_request(mock_responses: MockResponse) -> None:
 
 def test_unretryable_status_code(mock_responses: MockResponse) -> None:
     mock_sleep, status_code_sequences = mock_responses
-    status_code_sequences["https://example.com/fail"] = status_codes(
-        [(403, None), (200, None)]
-    )
+    status_code_sequences["https://example.com/fail"] = status_codes([(403, None), (200, None)])
     transport = RetryTransport()
 
     with httpx.Client(transport=transport) as client:
@@ -166,9 +157,7 @@ def test_unretryable_status_code(mock_responses: MockResponse) -> None:
 
 def test_unretryable_method(mock_responses: MockResponse) -> None:
     mock_sleep, status_code_sequences = mock_responses
-    status_code_sequences["https://example.com/fail"] = status_codes(
-        [(429, None), (200, None)]
-    )
+    status_code_sequences["https://example.com/fail"] = status_codes([(429, None), (200, None)])
     transport = RetryTransport()
 
     with httpx.Client(transport=transport) as client:
@@ -242,9 +231,7 @@ def test_retryable_exception(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
     transport = RetryTransport()
 
-    with patch(
-        "httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")
-    ):
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")):
         with httpx.Client(transport=transport) as client:
             with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
                 client.get("https://example.com")
@@ -279,9 +266,7 @@ def test_retry_operation_always_closes_response(status_code: int) -> None:
         responses.append(response)
         return response
 
-    transport._retry_operation(
-        request=httpx.Request("GET", "https://example.com"), send_method=send_method
-    )
+    transport._retry_operation(request=httpx.Request("GET", "https://example.com"), send_method=send_method)
 
     assert all(r.close.called for r in responses[:-1])
 
@@ -335,10 +320,7 @@ async def test_successful_async_request_logs(
 
     assert response.status_code == 200
     assert mock_asleep.call_count == 0
-    assert (
-        "handle_async_request started request=<Request('GET', 'https://example.com')>"
-        in caplog.text
-    )
+    assert "handle_async_request started request=<Request('GET', 'https://example.com')>" in caplog.text
     assert (
         "handle_async_request finished request=<Request('GET', 'https://example.com')> response=<Response [200 OK]>"
         in caplog.text
@@ -363,9 +345,7 @@ def test_custom_retryable_exception(mock_responses: MockResponse) -> None:
 
     # Verify other exceptions are not retried
     transport = RetryTransport(retry=retry)
-    with patch(
-        "httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")
-    ):
+    with patch("httpx.HTTPTransport.handle_request", side_effect=httpx.ReadTimeout("Timeout!")):
         with httpx.Client(transport=transport) as client:
             with pytest.raises(httpx.ReadTimeout, match="Timeout!"):
                 client.get("https://example.com")
@@ -402,9 +382,7 @@ def test_retry_respects_retry_after_header(mock_responses: MockResponse) -> None
     mock_sleep.assert_has_calls([call(5)] * 10)
 
 
-def test_transport_logs_retry_operation(
-    mock_responses: MockResponse, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_transport_logs_retry_operation(mock_responses: MockResponse, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     mock_sleep, status_code_sequences = mock_responses
     status_code_sequences["https://example.com/fail"] = status_codes([(429, "5")])
@@ -440,9 +418,7 @@ async def test_async_retry_operation_logs(
         response = await client.get("https://example.com/fail")
         assert response.status_code == 429
 
-    records = [
-        r for r in caplog.records if r.message.startswith("_retry_operation_async")
-    ]
+    records = [r for r in caplog.records if r.message.startswith("_retry_operation_async")]
     assert len(records) == 10
     assert records[0].message == (
         "_retry_operation_async retrying request=<Request('GET', 'https://example.com/fail')> "
@@ -491,9 +467,7 @@ async def test_sync_only_transport() -> None:
         assert response.status_code == 200
 
     # Async fails
-    with pytest.raises(
-        RuntimeError, match="Async request received but no async transport available"
-    ):
+    with pytest.raises(RuntimeError, match="Async request received but no async transport available"):
         async with httpx.AsyncClient(transport=transport) as client:
             await client.get("https://example.com")
 
@@ -521,9 +495,7 @@ async def test_async_unretryable_method(
     mock_async_responses: AsyncMockResponse,
 ) -> None:
     mock_asleep, status_code_sequences = mock_async_responses
-    status_code_sequences["https://example.com/fail"] = astatus_codes(
-        [(429, None), (200, None)]
-    )
+    status_code_sequences["https://example.com/fail"] = astatus_codes([(429, None), (200, None)])
     transport = RetryTransport()
 
     async with httpx.AsyncClient(transport=transport) as client:
@@ -600,9 +572,7 @@ async def test_retry_operation_async_always_closes_response(status_code: int) ->
         responses.append(response)
         return response
 
-    await transport._retry_operation_async(
-        request=httpx.Request("GET", "https://example.com"), send_method=send_method
-    )
+    await transport._retry_operation_async(request=httpx.Request("GET", "https://example.com"), send_method=send_method)
 
     assert all(r.aclose.called for r in responses[:-1])
 
@@ -624,9 +594,7 @@ async def test_async_retry_does_not_block_peer_coroutine() -> None:
                 return create_response(request, 503)
         return create_response(request, 200)
 
-    with patch(
-        "httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request
-    ):
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request):
         retry = Retry(total=3, backoff_factor=0.2, backoff_jitter=0.0)
         transport = RetryTransport(retry=retry)
 
@@ -645,9 +613,7 @@ async def test_async_retry_does_not_block_peer_coroutine() -> None:
         assert fast_response.status_code == 200
         assert slow_response.status_code == 200
         # Backoff for attempts_made=1 is 0.2 * 2 = 0.4s; fast must not be serialised behind it.
-        assert (
-            fast_elapsed < 0.2
-        ), f"fast request took {fast_elapsed:.3f}s — retry appears to block peers"
+        assert fast_elapsed < 0.2, f"fast request took {fast_elapsed:.3f}s — retry appears to block peers"
 
 
 @pytest.mark.asyncio
@@ -661,9 +627,7 @@ async def test_async_concurrent_retries_do_not_serialize() -> None:
             return create_response(request, 503)
         return create_response(request, 200)
 
-    with patch(
-        "httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request
-    ):
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request):
         retry = Retry(total=2, backoff_factor=0.15, backoff_jitter=0.0)
         transport = RetryTransport(retry=retry)
 
@@ -678,9 +642,7 @@ async def test_async_concurrent_retries_do_not_serialize() -> None:
 
         assert [r.status_code for r in responses] == [200, 200, 200]
         # Each request sleeps 0.3s once. Parallel ≈ 0.3s; serialised ≈ 0.9s.
-        assert (
-            elapsed < 0.7
-        ), f"three concurrent retries took {elapsed:.3f}s — they look serialised"
+        assert elapsed < 0.7, f"three concurrent retries took {elapsed:.3f}s — they look serialised"
 
 
 @pytest.mark.asyncio
@@ -703,9 +665,7 @@ async def test_async_retry_sleep_yields_to_event_loop() -> None:
             await asyncio.sleep(0.01)
             counter += 1
 
-    with patch(
-        "httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request
-    ):
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request):
         retry = Retry(total=3, backoff_factor=0.2, backoff_jitter=0.0)
         transport = RetryTransport(retry=retry)
 
@@ -718,9 +678,7 @@ async def test_async_retry_sleep_yields_to_event_loop() -> None:
     assert response.status_code == 200
     # Retry sleep is 0.4s. A non-blocked loop should tick ~40 times at 10ms cadence;
     # a blocked loop would tick 0 or 1 times.
-    assert (
-        counter > 5
-    ), f"ticker only advanced {counter} times during retry — event loop looks blocked"
+    assert counter > 5, f"ticker only advanced {counter} times during retry — event loop looks blocked"
 
 
 @pytest.mark.asyncio
@@ -734,12 +692,8 @@ async def test_async_shared_transport_isolates_retry_state() -> None:
             return create_response(request, 503)
         return create_response(request, 200)
 
-    with patch(
-        "httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request
-    ):
-        retry = Retry(
-            total=3, total_timeout=10.0, backoff_factor=0.05, backoff_jitter=0.0
-        )
+    with patch("httpx.AsyncHTTPTransport.handle_async_request", side_effect=handle_request):
+        retry = Retry(total=3, total_timeout=10.0, backoff_factor=0.05, backoff_jitter=0.0)
         transport = RetryTransport(retry=retry)
 
         async with httpx.AsyncClient(transport=transport) as client:
