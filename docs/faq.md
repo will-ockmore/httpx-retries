@@ -44,6 +44,37 @@ Retry(total=3, max_backoff_wait=5.0, backoff_factor=1, jitter=0)
 
 would result in a retry-inclusive timeout of `15s + 3 * (client_timeout)`.
 
+## Why wasn't my `ReadTimeout` retried?
+
+If an error like `httpx.ReadTimeout` or `httpx.RemoteProtocolError("peer closed connection without sending complete message body")` escapes your client with no retry attempts logged, this is expected given HTTPX's transport architecture, not a bug in `RetryTransport`.
+
+HTTPX transports return as soon as response *headers* are received. The response *body* is read lazily inside the client — by `response.read()`, `response.aread()`, or iteration over a streaming response. Errors that occur while reading the body are raised directly to the caller, bypassing the transport. Since [RetryTransport][httpx_retries.RetryTransport] only observes what flows through its `handle_request` / `handle_async_request` methods, it cannot retry these body-phase errors.
+
+Retried by [RetryTransport][httpx_retries.RetryTransport]:
+
+- `httpx.TimeoutException`, `httpx.NetworkError`, and `httpx.RemoteProtocolError` raised **before** response headers arrive (for example, a connect timeout, or a slow server that doesn't send headers in time).
+- Responses with a retryable status code (default: `429`, `502`, `503`, `504`).
+
+Not retried by [RetryTransport][httpx_retries.RetryTransport]:
+
+- Any exception raised during `response.read()`, `response.aread()`, or iteration of a streaming response — including `ReadTimeout` mid-body and `RemoteProtocolError("peer closed connection...")`.
+
+If you need to retry body-phase errors today, do it at the call site:
+
+```python
+import httpx
+
+retryable = (httpx.ReadTimeout, httpx.RemoteProtocolError)
+
+for attempt in range(5):
+    try:
+        response = client.get("https://example.com")
+        break
+    except retryable:
+        if attempt == 4:
+            raise
+```
+
 ## Limits / Cert / SSL / http2 parameters passed to the client are not being applied
 
 This is a limitation of the way transports are applied to clients in HTTPX. If you provide a custom transport, several parameters
