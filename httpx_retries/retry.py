@@ -188,6 +188,9 @@ class Retry:
         try:
             parsed_date = parsedate_to_datetime(retry_after)
             if parsed_date.tzinfo is None:
+                logger.warning(
+                    "Retry-After date has no timezone info, assuming UTC: %s", retry_after
+                )
                 parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
 
             diff = (parsed_date - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
