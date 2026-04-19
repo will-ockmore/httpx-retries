@@ -153,6 +153,7 @@ def test_parse_retry_after_http_date_no_tz() -> None:
 
 def test_parse_retry_after_http_date_no_tz_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     import logging
+
     retry = Retry()
     future_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=5)).strftime(
         "%a, %d %b %Y %H:%M:%S"
