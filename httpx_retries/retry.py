@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
-from typing import Final, Optional, Tuple, Type, Union
+from typing import Final
 
 import httpx
 
@@ -51,7 +51,7 @@ class Retry:
             ["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"].
         status_forcelist (Iterable[http.HTTPStatus, int], optional): The HTTP status codes that can be retried.
             Defaults to [429, 502, 503, 504].
-        retry_on_exceptions (Iterable[Type[httpx.HTTPError]], optional): The HTTP exceptions that can be retried.
+        retry_on_exceptions (Iterable[type[httpx.HTTPError]], optional): The HTTP exceptions that can be retried.
             Defaults to [httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError].
         backoff_jitter (float, optional): The amount of jitter to add to the backoff time, between 0 and 1.
             Defaults to 1 (full jitter).
@@ -82,7 +82,7 @@ class Retry:
             HTTPStatus.GATEWAY_TIMEOUT,
         ]
     )
-    RETRYABLE_EXCEPTIONS: Final[Tuple[Type[Exception], ...]] = (
+    RETRYABLE_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
         httpx.TimeoutException,
         httpx.NetworkError,
         httpx.RemoteProtocolError,
@@ -91,15 +91,15 @@ class Retry:
     def __init__(
         self,
         total: int = 10,
-        allowed_methods: Optional[Iterable[Union[HTTPMethod, str]]] = None,
-        status_forcelist: Optional[Iterable[Union[HTTPStatus, int]]] = None,
-        retry_on_exceptions: Optional[Iterable[Type[Exception]]] = None,
+        allowed_methods: Iterable[HTTPMethod | str] | None = None,
+        status_forcelist: Iterable[HTTPStatus | int] | None = None,
+        retry_on_exceptions: Iterable[type[Exception]] | None = None,
         backoff_factor: float = 0.0,
         respect_retry_after_header: bool = True,
         max_backoff_wait: float = 120.0,
         backoff_jitter: float = 1.0,
         attempts_made: int = 0,
-        total_timeout: Optional[float] = None,
+        total_timeout: float | None = None,
         elapsed_sleep: float = 0.0,
     ) -> None:
         """Initialize a new Retry instance."""
@@ -225,7 +225,7 @@ class Retry:
 
         return min(backoff, self.max_backoff_wait)
 
-    def _calculate_sleep(self, headers: Union[httpx.Headers, Mapping[str, str]]) -> float:
+    def _calculate_sleep(self, headers: httpx.Headers | Mapping[str, str]) -> float:
         """Calculate the sleep duration based on headers and backoff strategy."""
         sleep_time = 0.0
         # Check Retry-After header first if enabled
@@ -250,7 +250,7 @@ class Retry:
 
         return sleep_time
 
-    def sleep(self, response: Union[httpx.Response, Exception]) -> None:
+    def sleep(self, response: httpx.Response | Exception) -> None:
         """
         Sleep between retry attempts using the calculated duration.
 
@@ -263,7 +263,7 @@ class Retry:
         time.sleep(time_to_sleep)
         self.elapsed_sleep += time_to_sleep
 
-    async def asleep(self, response: Union[httpx.Response, Exception]) -> None:
+    async def asleep(self, response: httpx.Response | Exception) -> None:
         """
         Sleep between retry attempts asynchronously using the calculated duration.
 

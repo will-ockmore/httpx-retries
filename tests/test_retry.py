@@ -1,7 +1,6 @@
 import datetime
 import logging
 from http import HTTPStatus
-from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -242,7 +241,7 @@ def test_calculate_sleep_returns_immediately_by_default() -> None:
 def test_calculate_sleep_with_backoff() -> None:
     retry = Retry(backoff_factor=2)
     headers = Headers({})
-    attempts: List[Retry] = [retry]
+    attempts: list[Retry] = [retry]
     for _ in range(3):
         attempts.append(attempts[-1].increment())
 
