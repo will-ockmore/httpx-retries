@@ -150,6 +150,18 @@ def test_parse_retry_after_http_date_no_tz() -> None:
     assert 3 < result < 7
 
 
+def test_parse_retry_after_http_date_no_tz_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    retry = Retry()
+    future_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=5)).strftime(
+        "%a, %d %b %Y %H:%M:%S"
+    )
+    with caplog.at_level(logging.WARNING, logger="httpx_retries.retry"):
+        retry.parse_retry_after(future_date)
+    assert "assuming UTC" in caplog.text
+
+
 def test_calculate_sleep_with_retry_after_over_max() -> None:
     retry = Retry(max_backoff_wait=5)
     headers = Headers({"Retry-After": "10"})
