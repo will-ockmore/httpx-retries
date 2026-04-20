@@ -1,14 +1,26 @@
 # HTTPX Retries
 
-
 <p>
-<a href="https://github.com/will-ockmore/httpx-retry/actions">
-    <img src="https://github.com/will-ockmore/httpx-retry/workflows/Test%20Suite/badge.svg" alt="Test Suite">
-</a>
-<a href="https://pypi.org/project/httpx-retries/">
-    <img src="https://badge.fury.io/py/httpx-retries.svg" alt="Package version">
-</a>
+    <a href="https://github.com/will-ockmore/httpx-retries/actions">
+        <img
+            src="https://github.com/will-ockmore/httpx-retries/actions/workflows/test-suite.yml/badge.svg?branch=main"
+            alt="Test Suite"
+        >
+    </a>
+    <a href="https://pypi.org/project/httpx-retries/">
+        <img src="https://badge.fury.io/py/httpx-retries.svg" alt="Package version">
+    </a>
+    <a href="https://pypi.org/project/httpx-retries/">
+        <img src="https://img.shields.io/pypi/pyversions/httpx-retries.svg" alt="Python versions">
+    </a>
+    <a href="https://pepy.tech/project/httpx-retries">
+        <img src="https://static.pepy.tech/badge/httpx-retries/month" alt="Downloads">
+    </a>
+    <a href="https://codecov.io/gh/will-ockmore/httpx-retries">
+        <img src="https://codecov.io/gh/will-ockmore/httpx-retries/branch/main/graph/badge.svg" alt="Coverage">
+    </a>
 </p>
+
 
 <em>A retry layer for HTTPX.</em>
 

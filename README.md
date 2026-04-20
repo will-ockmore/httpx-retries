@@ -16,12 +16,6 @@
 <a href="https://codecov.io/gh/will-ockmore/httpx-retries">
     <img src="https://codecov.io/gh/will-ockmore/httpx-retries/branch/main/graph/badge.svg" alt="Coverage">
 </a>
-<a href="https://github.com/will-ockmore/httpx-retries/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/will-ockmore/httpx-retries.svg" alt="License">
-</a>
-<a href="https://github.com/astral-sh/ruff">
-    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff">
-</a>
 </p>
 <!-- badges-end -->
 
