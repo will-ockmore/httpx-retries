@@ -82,10 +82,7 @@ To release a new version:
 
 1. Update version in `pyproject.toml` following [Semantic versioning](https://semver.org/spec/v2.0.0.html) (for example: `0.2.4`)
 2. Update `CHANGELOG.md`, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-3. Create a new release on GitHub:
-   - Tag version like `0.2.4`
-   - Title `0.2.4`
-   - Description copied from the changelog
+3. Create a new release on GitHub. Tag version like `0.2.4`. Title `0.2.4`. Description copied from the changelog, including references to PRs for changes.
 4. The GitHub release will automatically trigger a PyPI publish
 
 If the PyPI publish fails, you can manually publish using:

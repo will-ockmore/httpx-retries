@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-20
+
+### Added
+- `total_timeout` parameter on `Retry` to cap the cumulative time spent sleeping across retry attempts on a single request.
+- FAQ section explaining retry behaviour for read errors.
+- Security note in the logging docs warning that DEBUG logs include full request URLs, including query strings.
+
+### Changed
+- Dropped support for Python 3.9; added classifiers for Python 3.13 and 3.14.
+- Non-standard HTTP methods are now accepted without raising; `Retry.allowed_methods` stores uppercase strings rather than `http.HTTPMethod` members.
+
+### Fixed
+- Log a warning when a `Retry-After` HTTP-date value is parsed without timezone info, instead of silently using the local offset.
+- `parse_retry_after` now rejects non-ASCII digit characters per RFC 7231.
+
 ## [0.4.6] - 2026-02-18
 
 ### Fixed
