@@ -3,4 +3,4 @@
 set -euo pipefail
 
 uv build --no-sources
-mkdocs build
+uv run mkdocs build

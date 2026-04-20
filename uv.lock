@@ -397,7 +397,7 @@ wheels = [
 
 [[package]]
 name = "httpx-retries"
-version = "0.4.6"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
