@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
-from typing import Any, Optional, Union
+from typing import Any
 
 import httpx
 
@@ -46,8 +46,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
     def __init__(
         self,
-        transport: Optional[Union[httpx.BaseTransport, httpx.AsyncBaseTransport]] = None,
-        retry: Optional[Retry] = None,
+        transport: httpx.BaseTransport | httpx.AsyncBaseTransport | None = None,
+        retry: Retry | None = None,
     ) -> None:
         self.retry = retry or Retry()
 
@@ -127,7 +127,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., httpx.Response],
     ) -> httpx.Response:
         retry = self.retry
-        response: Union[httpx.Response, Exception, None] = None
+        response: httpx.Response | Exception | None = None
 
         while True:
             if response is not None:
@@ -155,7 +155,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
     ) -> httpx.Response:
         retry = self.retry
-        response: Union[httpx.Response, Exception, None] = None
+        response: httpx.Response | Exception | None = None
 
         while True:
             if response is not None:

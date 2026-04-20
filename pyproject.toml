@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "httpx-retries"
 version = "0.4.6"
 description = "A retry layer for HTTPX."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
 dependencies = ["httpx>=0.20.0"]
 classifiers = [
@@ -18,10 +18,11 @@ classifiers = [
     "Framework :: AsyncIO",
     "Framework :: Trio",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.9",
     "Topic :: Internet :: WWW/HTTP",
 ]
 dynamic = ["readme", "license"]

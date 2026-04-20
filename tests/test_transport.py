@@ -2,7 +2,6 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator, Generator
-from typing import Dict, Optional, Union
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import httpx
@@ -13,8 +12,8 @@ from httpx_retries import Retry, RetryTransport
 
 
 def status_codes(
-    codes: list[tuple[int, Union[str, None]]],
-) -> Generator[tuple[int, Union[str, None]], None, None]:
+    codes: list[tuple[int, str | None]],
+) -> Generator[tuple[int, str | None], None, None]:
     """Yields the given status codes, and then the last status code indefinitely."""
     yield from codes
     while True:
@@ -22,8 +21,8 @@ def status_codes(
 
 
 async def astatus_codes(
-    codes: list[tuple[int, Union[str, None]]],
-) -> AsyncGenerator[tuple[int, Union[str, None]], None]:
+    codes: list[tuple[int, str | None]],
+) -> AsyncGenerator[tuple[int, str | None], None]:
     """Yields the given status codes, and then the last status code indefinitely."""
     for code in codes:
         yield code
@@ -32,23 +31,23 @@ async def astatus_codes(
         yield codes[-1]
 
 
-def create_response(request: Request, status_code: int, retry_after: Optional[str] = None) -> Response:
+def create_response(request: Request, status_code: int, retry_after: str | None = None) -> Response:
     """Helper to create a response with the given status code and retry-after header"""
     headers = {"Retry-After": retry_after} if retry_after else {}
     return Response(status_code=status_code, request=request, headers=headers)
 
 
-StatusCodeTuple = tuple[int, Union[str, None]]
+StatusCodeTuple = tuple[int, str | None]
 StatusCodeSequence = Generator[StatusCodeTuple, None, None]
 AsyncStatusCodeSequence = AsyncGenerator[StatusCodeTuple, None]
-MockResponse = tuple[MagicMock, Dict[str, Optional[StatusCodeSequence]]]
-AsyncMockResponse = tuple[AsyncMock, Dict[str, Optional[AsyncStatusCodeSequence]]]
+MockResponse = tuple[MagicMock, dict[str, StatusCodeSequence | None]]
+AsyncMockResponse = tuple[AsyncMock, dict[str, AsyncStatusCodeSequence | None]]
 
 
 @pytest.fixture
 def mock_responses(mock_sleep: MagicMock) -> Generator[MockResponse, None, None]:
     """Returns a mock for sleep and response sequences for sync requests"""
-    status_code_sequences: Dict[str, Optional[StatusCodeSequence]] = {}
+    status_code_sequences: dict[str, StatusCodeSequence | None] = {}
 
     def handle_request(request: Request) -> Response:
         if request.url in status_code_sequences:
@@ -68,7 +67,7 @@ def mock_async_responses(
     mock_asleep: AsyncMock,
 ) -> Generator[AsyncMockResponse, None, None]:
     """Returns a mock for sleep and response sequences for async requests"""
-    status_code_sequences: Dict[str, Optional[AsyncStatusCodeSequence]] = {}
+    status_code_sequences: dict[str, AsyncStatusCodeSequence | None] = {}
 
     async def handle_async_request(request: Request) -> Response:
         if request.url in status_code_sequences:
@@ -618,7 +617,7 @@ async def test_async_retry_does_not_block_peer_coroutine() -> None:
 
 @pytest.mark.asyncio
 async def test_async_concurrent_retries_do_not_serialize() -> None:
-    call_counts: Dict[str, int] = {}
+    call_counts: dict[str, int] = {}
 
     async def handle_request(request: Request) -> Response:
         url = str(request.url)
@@ -683,7 +682,7 @@ async def test_async_retry_sleep_yields_to_event_loop() -> None:
 
 @pytest.mark.asyncio
 async def test_async_shared_transport_isolates_retry_state() -> None:
-    call_counts: Dict[str, int] = {}
+    call_counts: dict[str, int] = {}
 
     async def handle_request(request: Request) -> Response:
         url = str(request.url)
