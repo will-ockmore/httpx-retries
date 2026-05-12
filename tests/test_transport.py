@@ -748,7 +748,7 @@ def test_validate_response_exhausted_returns_response(mock_responses: MockRespon
 def test_validate_response_async_callback_raises_for_sync_transport(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
 
-    async def validate(response: httpx.Response) -> None:
+    async def validate(response: httpx.Response) -> None:  # pragma: no cover
         pass
 
     retry = Retry(total=3, validate_response=validate)
