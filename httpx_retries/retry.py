@@ -30,6 +30,13 @@ else:  # pragma: no cover
         CONNECT = "CONNECT"
 
 
+class _UnsetType:
+    __slots__ = ()
+
+
+_UNSET: Final[_UnsetType] = _UnsetType()
+
+
 class Retry:
     """
     A class to encapsulate retry logic and configuration.
@@ -277,22 +284,43 @@ class Retry:
         await asyncio.sleep(time_to_sleep)
         self.elapsed_sleep += time_to_sleep
 
+    def copy_with(
+        self,
+        total: int | _UnsetType = _UNSET,
+        allowed_methods: Iterable[HTTPMethod | str] | None | _UnsetType = _UNSET,
+        status_forcelist: Iterable[HTTPStatus | int] | None | _UnsetType = _UNSET,
+        retry_on_exceptions: Iterable[type[Exception]] | None | _UnsetType = _UNSET,
+        backoff_factor: float | _UnsetType = _UNSET,
+        respect_retry_after_header: bool | _UnsetType = _UNSET,
+        max_backoff_wait: float | _UnsetType = _UNSET,
+        backoff_jitter: float | _UnsetType = _UNSET,
+        attempts_made: int | _UnsetType = _UNSET,
+        total_timeout: float | None | _UnsetType = _UNSET,
+        elapsed_sleep: float | _UnsetType = _UNSET,
+    ) -> "Retry":
+        """Return a new Retry with selected fields overridden."""
+        return self.__class__(
+            total=self.total if isinstance(total, _UnsetType) else total,
+            allowed_methods=self.allowed_methods if isinstance(allowed_methods, _UnsetType) else allowed_methods,
+            status_forcelist=self.status_forcelist if isinstance(status_forcelist, _UnsetType) else status_forcelist,
+            retry_on_exceptions=self.retryable_exceptions
+            if isinstance(retry_on_exceptions, _UnsetType)
+            else retry_on_exceptions,
+            backoff_factor=self.backoff_factor if isinstance(backoff_factor, _UnsetType) else backoff_factor,
+            respect_retry_after_header=self.respect_retry_after_header
+            if isinstance(respect_retry_after_header, _UnsetType)
+            else respect_retry_after_header,
+            max_backoff_wait=self.max_backoff_wait if isinstance(max_backoff_wait, _UnsetType) else max_backoff_wait,
+            backoff_jitter=self.backoff_jitter if isinstance(backoff_jitter, _UnsetType) else backoff_jitter,
+            attempts_made=self.attempts_made if isinstance(attempts_made, _UnsetType) else attempts_made,
+            total_timeout=self.total_timeout if isinstance(total_timeout, _UnsetType) else total_timeout,
+            elapsed_sleep=self.elapsed_sleep if isinstance(elapsed_sleep, _UnsetType) else elapsed_sleep,
+        )
+
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
         logger.debug("increment retry=%s new_attempts_made=%s", self, self.attempts_made + 1)
-        return self.__class__(
-            total=self.total,
-            max_backoff_wait=self.max_backoff_wait,
-            backoff_factor=self.backoff_factor,
-            respect_retry_after_header=self.respect_retry_after_header,
-            allowed_methods=self.allowed_methods,
-            status_forcelist=self.status_forcelist,
-            retry_on_exceptions=self.retryable_exceptions,
-            backoff_jitter=self.backoff_jitter,
-            attempts_made=self.attempts_made + 1,
-            total_timeout=self.total_timeout,
-            elapsed_sleep=self.elapsed_sleep,
-        )
+        return self.copy_with(attempts_made=self.attempts_made + 1)
 
     def __repr__(self) -> str:
         return f"<Retry(total={self.total}, attempts_made={self.attempts_made})>"

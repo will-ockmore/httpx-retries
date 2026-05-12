@@ -265,7 +265,9 @@ def test_retry_operation_always_closes_response(status_code: int) -> None:
         responses.append(response)
         return response
 
-    transport._retry_operation(request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry)
+    transport._retry_operation(
+        request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry
+    )
 
     assert all(r.close.called for r in responses[:-1])
 
@@ -621,7 +623,9 @@ async def test_retry_operation_async_always_closes_response(status_code: int) ->
         responses.append(response)
         return response
 
-    await transport._retry_operation_async(request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry)
+    await transport._retry_operation_async(
+        request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry
+    )
 
     assert all(r.aclose.called for r in responses[:-1])
 
