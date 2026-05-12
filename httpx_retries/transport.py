@@ -87,9 +87,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         logger.debug("handle_request started request=%s", request)
 
-        if self.retry.is_retryable_method(request.method):
+        retry: Retry = request.extensions.setdefault("retry", self.retry)
+
+        if retry.is_retryable_method(request.method):
             send_method = partial(self._sync_transport.handle_request)
-            response = self._retry_operation(request, send_method)
+            response = self._retry_operation(request, send_method, retry)
         else:
             response = self._sync_transport.handle_request(request)
 
@@ -111,9 +113,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         logger.debug("handle_async_request started request=%s", request)
 
-        if self.retry.is_retryable_method(request.method):
+        retry: Retry = request.extensions.setdefault("retry", self.retry)
+
+        if retry.is_retryable_method(request.method):
             send_method = partial(self._async_transport.handle_async_request)
-            response = await self._retry_operation_async(request, send_method)
+            response = await self._retry_operation_async(request, send_method, retry)
         else:
             response = await self._async_transport.handle_async_request(request)
 
@@ -125,8 +129,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         self,
         request: httpx.Request,
         send_method: Callable[..., httpx.Response],
+        retry: Retry,
     ) -> httpx.Response:
-        retry = self.retry
         response: httpx.Response | Exception | None = None
 
         while True:
@@ -153,8 +157,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         self,
         request: httpx.Request,
         send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
+        retry: Retry,
     ) -> httpx.Response:
-        retry = self.retry
         response: httpx.Response | Exception | None = None
 
         while True:
