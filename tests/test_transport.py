@@ -716,7 +716,7 @@ def test_validate_response_retries_on_failure(mock_responses: MockResponse) -> N
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise ValueError("not ready yet")
+            raise httpx.TimeoutException("not ready yet")
 
     retry = Retry(total=5, validate_response=validate)
     transport = RetryTransport(retry=retry)
@@ -729,11 +729,27 @@ def test_validate_response_retries_on_failure(mock_responses: MockResponse) -> N
     assert mock_sleep.call_count == 2
 
 
+def test_validate_response_non_retryable_exception_raises(mock_responses: MockResponse) -> None:
+    mock_sleep, _ = mock_responses
+
+    def validate(response: httpx.Response) -> None:
+        raise ValueError("bad response")
+
+    retry = Retry(total=5, validate_response=validate)
+    transport = RetryTransport(retry=retry)
+
+    with pytest.raises(ValueError, match="bad response"):
+        with httpx.Client(transport=transport) as client:
+            client.get("https://example.com")
+
+    assert mock_sleep.call_count == 0
+
+
 def test_validate_response_exhausted_returns_response(mock_responses: MockResponse) -> None:
     mock_sleep, _ = mock_responses
 
     def validate(response: httpx.Response) -> None:
-        raise ValueError("always bad")
+        raise httpx.TimeoutException("always bad")
 
     retry = Retry(total=3, validate_response=validate)
     transport = RetryTransport(retry=retry)
@@ -768,7 +784,7 @@ async def test_async_validate_response_retries_on_failure(mock_async_responses: 
         nonlocal call_count
         call_count += 1
         if call_count < 3:
-            raise ValueError("not ready yet")
+            raise httpx.TimeoutException("not ready yet")
 
     retry = Retry(total=5, validate_response=validate)
     transport = RetryTransport(retry=retry)
@@ -782,6 +798,23 @@ async def test_async_validate_response_retries_on_failure(mock_async_responses: 
 
 
 @pytest.mark.asyncio
+async def test_async_validate_response_non_retryable_exception_raises(mock_async_responses: AsyncMockResponse) -> None:
+    mock_asleep, _ = mock_async_responses
+
+    async def validate(response: httpx.Response) -> None:
+        raise ValueError("bad response")
+
+    retry = Retry(total=5, validate_response=validate)
+    transport = RetryTransport(retry=retry)
+
+    with pytest.raises(ValueError, match="bad response"):
+        async with httpx.AsyncClient(transport=transport) as client:
+            await client.get("https://example.com")
+
+    assert mock_asleep.call_count == 0
+
+
+@pytest.mark.asyncio
 async def test_async_validate_response_sync_callback(mock_async_responses: AsyncMockResponse) -> None:
     mock_asleep, _ = mock_async_responses
     call_count = 0
@@ -790,7 +823,7 @@ async def test_async_validate_response_sync_callback(mock_async_responses: Async
         nonlocal call_count
         call_count += 1
         if call_count < 2:
-            raise ValueError("not ready yet")
+            raise httpx.TimeoutException("not ready yet")
 
     retry = Retry(total=5, validate_response=validate)
     transport = RetryTransport(retry=retry)
@@ -808,7 +841,7 @@ async def test_async_validate_response_exhausted_returns_response(mock_async_res
     mock_asleep, _ = mock_async_responses
 
     async def validate(response: httpx.Response) -> None:
-        raise ValueError("always bad")
+        raise httpx.TimeoutException("always bad")
 
     retry = Retry(total=3, validate_response=validate)
     transport = RetryTransport(retry=retry)

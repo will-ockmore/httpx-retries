@@ -159,7 +159,9 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                     response.request = request
                     try:
                         self.retry.validate_response(response)
-                    except Exception:
+                    except Exception as e:
+                        if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                            raise
                         continue
                 return response
 
@@ -202,6 +204,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                             await self.retry.validate_response(response)
                         else:
                             self.retry.validate_response(response)
-                    except Exception:
+                    except Exception as e:
+                        if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                            raise
                         continue
                 return response
