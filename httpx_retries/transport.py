@@ -1,3 +1,4 @@
+import inspect
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
@@ -126,6 +127,9 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         request: httpx.Request,
         send_method: Callable[..., httpx.Response],
     ) -> httpx.Response:
+        if self.retry.validate_response is not None and inspect.iscoroutinefunction(self.retry.validate_response):
+            raise TypeError("validate_response must be a sync function when using a sync transport")
+
         retry = self.retry
         response: httpx.Response | Exception | None = None
 
@@ -146,7 +150,15 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+            if retry.is_exhausted():
+                return response
+
+            if not retry.is_retryable_status_code(response.status_code):
+                if self.retry.validate_response is not None:
+                    try:
+                        self.retry.validate_response(response)
+                    except Exception:
+                        continue
                 return response
 
     async def _retry_operation_async(
@@ -176,5 +188,16 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+            if retry.is_exhausted():
+                return response
+
+            if not retry.is_retryable_status_code(response.status_code):
+                if self.retry.validate_response is not None:
+                    try:
+                        if inspect.iscoroutinefunction(self.retry.validate_response):
+                            await self.retry.validate_response(response)
+                        else:
+                            self.retry.validate_response(response)
+                    except Exception:
+                        continue
                 return response
