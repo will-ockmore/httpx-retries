@@ -550,3 +550,37 @@ def test_is_exhausted_below_total_timeout() -> None:
     retry = Retry(total=10, total_timeout=5)
     retry.elapsed_sleep = 4.9
     assert retry.is_exhausted() is False
+
+
+def test_copy_with_overrides_fields() -> None:
+    retry = Retry(total=10, backoff_factor=0.5, total_timeout=30.0)
+    copy = retry.copy_with(total=3, backoff_factor=1.0)
+    assert copy.total == 3
+    assert copy.backoff_factor == 1.0
+    assert copy.total_timeout == 30.0  # unchanged
+
+
+def test_copy_with_no_args_equals_original() -> None:
+    retry = Retry(total=5, backoff_factor=0.2, max_backoff_wait=60.0)
+    copy = retry.copy_with()
+    assert copy.total == retry.total
+    assert copy.backoff_factor == retry.backoff_factor
+    assert copy.max_backoff_wait == retry.max_backoff_wait
+    assert copy.allowed_methods == retry.allowed_methods
+    assert copy.status_forcelist == retry.status_forcelist
+    assert copy.retryable_exceptions == retry.retryable_exceptions
+
+
+def test_copy_with_can_set_total_timeout_to_none() -> None:
+    retry = Retry(total=5, total_timeout=10.0)
+    copy = retry.copy_with(total_timeout=None)
+    assert copy.total_timeout is None
+
+
+def test_copy_with_preserves_subclass() -> None:
+    class CustomRetry(Retry):
+        pass
+
+    retry = CustomRetry(total=5)
+    copy = retry.copy_with(total=3)
+    assert type(copy) is CustomRetry
