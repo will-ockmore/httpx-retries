@@ -59,20 +59,24 @@ Not retried by [RetryTransport][httpx_retries.RetryTransport]:
 
 - Any exception raised during `response.read()`, `response.aread()`, or iteration of a streaming response — including `ReadTimeout` mid-body and `RemoteProtocolError("peer closed connection...")`.
 
-If you need to retry body-phase errors today, do it at the call site:
+To retry body-phase errors, use `validate_response` to read the body inside the transport after other retry checks passed:
 
 ```python
 import httpx
+from httpx_retries import Retry, RetryTransport
 
-retryable = (httpx.ReadTimeout, httpx.RemoteProtocolError)
+def validate(response: httpx.Response) -> None:
+    response.read()  # raises ReadTimeout or RemoteProtocolError if body read fails
 
-for attempt in range(5):
-    try:
-        response = client.get("https://example.com")
-        break
-    except retryable:
-        if attempt == 4:
-            raise
+async def async_validate(response: httpx.Response) -> None:
+    await response.aread()  # raises ReadTimeout or RemoteProtocolError if body read fails
+
+client = httpx.Client(
+    transport=RetryTransport(retry=Retry(total=5, validate_response=validate))
+)
+async_client = httpx.AsyncClient(
+    transport=RetryTransport(retry=Retry(total=5, validate_response=async_validate))
+)
 ```
 
 ## Limits / Cert / SSL / http2 parameters passed to the client are not being applied
