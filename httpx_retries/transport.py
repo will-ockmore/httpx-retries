@@ -155,6 +155,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
             if not retry.is_retryable_status_code(response.status_code):
                 if self.retry.validate_response is not None:
+                    # normally set by httpx _after_ calling this function, but we want the request in the validator
+                    response.request = request
                     try:
                         self.retry.validate_response(response)
                     except Exception:
@@ -193,6 +195,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
             if not retry.is_retryable_status_code(response.status_code):
                 if self.retry.validate_response is not None:
+                    # normally set by httpx _after_ calling this function, but we want the request in the validator
+                    response.request = request
                     try:
                         if inspect.iscoroutinefunction(self.retry.validate_response):
                             await self.retry.validate_response(response)
