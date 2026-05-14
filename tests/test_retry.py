@@ -33,8 +33,8 @@ def test_retry_custom_initialization() -> None:
     assert retry.max_backoff_wait == 30
     assert HTTPMethod.GET in retry.allowed_methods
     assert HTTPMethod.POST in retry.allowed_methods
-    assert HTTPStatus.INTERNAL_SERVER_ERROR in retry.status_forcelist
-    assert HTTPStatus.BAD_GATEWAY in retry.status_forcelist
+    assert retry.is_retryable_status_code(HTTPStatus.INTERNAL_SERVER_ERROR)
+    assert retry.is_retryable_status_code(HTTPStatus.BAD_GATEWAY)
 
 
 def test_is_retryable_method() -> None:
@@ -108,6 +108,15 @@ def test_custom_retry_status_codes_non_standard() -> None:
     assert retry.is_retryable_status_code(599) is True
     assert retry.is_retryable_status_code(500) is False
     assert retry.is_retryable_status_code(502) is False
+
+
+def test_custom_retry_status_codes_predicate() -> None:
+    retry = Retry(status_forcelist=lambda status_code: status_code >= 500)
+
+    assert retry.is_retryable_status_code(500) is True
+    assert retry.is_retryable_status_code(599) is True
+    assert retry.is_retryable_status_code(429) is False
+    assert retry.is_retry("GET", 503, False) is True
 
 
 def test_is_exhausted() -> None:
