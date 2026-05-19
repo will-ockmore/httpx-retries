@@ -139,7 +139,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                     response.close()
 
                 logger.debug("_retry_operation retrying request=%s response=%s retry=%s", request, response, retry)
-                retry = request.extensions["retry"] = retry.increment()
+                retry = retry.increment()
                 retry.sleep(response)
             try:
                 response = send_method(request)
@@ -151,6 +151,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 continue
 
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+                response.extensions["retry"] = retry
                 return response
 
     async def _retry_operation_async(
@@ -169,7 +170,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 logger.debug(
                     "_retry_operation_async retrying request=%s response=%s retry=%s", request, response, retry
                 )
-                retry = request.extensions["retry"] = retry.increment()
+                retry = retry.increment()
                 await retry.asleep(response)
             try:
                 response = await send_method(request)
@@ -181,4 +182,5 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 continue
 
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+                response.extensions["retry"] = retry
                 return response

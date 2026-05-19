@@ -260,6 +260,7 @@ def test_retry_operation_always_closes_response(status_code: int) -> None:
         response = Mock(spec=httpx.Response)
         response.status_code = status_code
         response.headers = httpx.Headers()
+        response.extensions = {}
         response.close = Mock()
 
         responses.append(response)
@@ -535,6 +536,7 @@ def test_retry_extension_overrides_transport(mock_responses: MockResponse) -> No
 
     assert response.status_code == 429
     assert mock_sleep.call_count == 2
+    assert response.extensions["retry"].attempts_made == 2
 
 
 def test_retry_extension_set_from_transport_when_absent(mock_responses: MockResponse) -> None:
@@ -543,9 +545,10 @@ def test_retry_extension_set_from_transport_when_absent(mock_responses: MockResp
 
     request = httpx.Request("GET", "https://example.com")
     with httpx.Client(transport=transport) as client:
-        client.send(request)
+        response = client.send(request)
 
     assert request.extensions["retry"] is transport.retry
+    assert response.extensions["retry"] is transport.retry
 
 
 @pytest.mark.asyncio
@@ -560,6 +563,7 @@ async def test_async_retry_extension_overrides_transport(mock_async_responses: A
 
     assert response.status_code == 429
     assert mock_asleep.call_count == 2
+    assert response.extensions["retry"].attempts_made == 2
 
 
 @pytest.mark.asyncio
@@ -569,9 +573,10 @@ async def test_async_retry_extension_set_from_transport_when_absent(mock_async_r
 
     request = httpx.Request("GET", "https://example.com")
     async with httpx.AsyncClient(transport=transport) as client:
-        await client.send(request)
+        response = await client.send(request)
 
     assert request.extensions["retry"] is transport.retry
+    assert response.extensions["retry"] is transport.retry
 
 
 def test_retry_after_capped_by_total_timeout(mock_responses: MockResponse) -> None:
@@ -618,6 +623,7 @@ async def test_retry_operation_async_always_closes_response(status_code: int) ->
         response = AsyncMock(spec=httpx.Response)
         response.status_code = status_code
         response.headers = httpx.Headers()
+        response.extensions = {}
         response.aclose = AsyncMock()
 
         responses.append(response)
