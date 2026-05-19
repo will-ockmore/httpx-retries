@@ -75,6 +75,38 @@ for attempt in range(5):
             raise
 ```
 
+## Retrying on response content
+
+Sometimes a server returns a valid response but the body or custom headers signals a failure - for example, a block page, a CAPTCHA redirect, or an authorization wall. This commonly occurs if access may be blocked at the content level rather than the HTTP status level.
+
+Use `validate_response` to inspect the response and raise an exception to trigger a retry:
+
+```python
+import httpx
+from httpx_retries import Retry, RetryTransport
+
+class ContentBlocked(ValueError):
+    pass
+
+def validate_response(response: httpx.Response) -> None:
+    # safely inspect status and headers if needed
+    response.raise_for_status()
+
+    # NOTE: Do not call `.read()` here with `Client.stream`,
+    # it will buffer the entire body, which defeats the purpose of streaming.
+    response.read()
+    if "content blocked" in response.text:
+        raise ContentBlocked(response.text)
+
+retry = Retry(validate_response=validate_response, retry_on_exceptions=[httpx.HTTPStatusError, ContentBlocked])
+
+with httpx.Client(transport=RetryTransport(retry=retry)) as client:
+    response = client.get("https://example.com")
+```
+
+!!! warning "Do not call `response.read()` inside `validate_response` with `Client.stream`"
+    `validate_response` is called before the response is returned to the caller. Calling `response.read()` or `await response.aread()` inside it will buffer the entire body, which defeats the purpose of streaming. If you use streaming, validate only the status code and headers.
+
 ## Limits / Cert / SSL / http2 parameters passed to the client are not being applied
 
 This is a limitation of the way transports are applied to clients in HTTPX. If you provide a custom transport, several parameters
