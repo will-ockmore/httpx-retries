@@ -4,7 +4,7 @@ import logging
 import random
 import sys
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
@@ -226,12 +226,12 @@ class Retry:
 
         return min(backoff, self.max_backoff_wait)
 
-    def _calculate_sleep(self, headers: httpx.Headers | Mapping[str, str]) -> float:
+    def calculate_sleep(self, response: httpx.Response | Exception) -> float:
         """Calculate the sleep duration based on headers and backoff strategy."""
         sleep_time = 0.0
         # Check Retry-After header first if enabled
-        if self.respect_retry_after_header:
-            retry_after = headers.get("Retry-After", "").strip()
+        if isinstance(response, httpx.Response) and self.respect_retry_after_header:
+            retry_after = response.headers.get("Retry-After", "").strip()
             if retry_after:
                 try:
                     retry_after_sleep = min(self.parse_retry_after(retry_after), self.max_backoff_wait)
@@ -251,7 +251,7 @@ class Retry:
 
         return sleep_time
 
-    def sleep(self, response: httpx.Response | Exception) -> None:
+    def sleep(self, response: httpx.Response | Exception | float) -> None:
         """
         Sleep between retry attempts using the calculated duration.
 
@@ -259,12 +259,11 @@ class Retry:
         of the time requested. If that is not present, it will use an exponential backoff. By default,
         the backoff factor is 0 and this method will return immediately.
         """
-        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
-        logger.debug("sleep seconds=%s", time_to_sleep)
+        time_to_sleep = response if isinstance(response, (int, float)) else self.calculate_sleep(response)
         time.sleep(time_to_sleep)
         self.elapsed_sleep += time_to_sleep
 
-    async def asleep(self, response: httpx.Response | Exception) -> None:
+    async def asleep(self, response: httpx.Response | Exception | float) -> None:
         """
         Sleep between retry attempts asynchronously using the calculated duration.
 
@@ -272,14 +271,12 @@ class Retry:
         of the time requested. If that is not present, it will use an exponential backoff. By default,
         the backoff factor is 0 and this method will return immediately.
         """
-        time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
-        logger.debug("asleep seconds=%s", time_to_sleep)
+        time_to_sleep = response if isinstance(response, (int, float)) else self.calculate_sleep(response)
         await asyncio.sleep(time_to_sleep)
         self.elapsed_sleep += time_to_sleep
 
     def increment(self) -> "Retry":
         """Return a new Retry instance with the attempt count incremented."""
-        logger.debug("increment retry=%s new_attempts_made=%s", self, self.attempts_made + 1)
         return self.__class__(
             total=self.total,
             max_backoff_wait=self.max_backoff_wait,

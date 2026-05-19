@@ -85,15 +85,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._sync_transport is None:
             raise RuntimeError("Synchronous request received but no sync transport available")
 
-        logger.debug("handle_request started request=%s", request)
-
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._sync_transport.handle_request)
             response = self._retry_operation(request, send_method)
         else:
             response = self._sync_transport.handle_request(request)
-
-        logger.debug("handle_request finished request=%s response=%s", request, response)
 
         return response
 
@@ -109,15 +105,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         if self._async_transport is None:
             raise RuntimeError("Async request received but no async transport available")
 
-        logger.debug("handle_async_request started request=%s", request)
-
         if self.retry.is_retryable_method(request.method):
             send_method = partial(self._async_transport.handle_async_request)
             response = await self._retry_operation_async(request, send_method)
         else:
             response = await self._async_transport.handle_async_request(request)
-
-        logger.debug("handle_async_request finished request=%s response=%s", request, response)
 
         return response
 
@@ -134,9 +126,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 if isinstance(response, httpx.Response):
                     response.close()
 
-                logger.debug("_retry_operation retrying request=%s response=%s retry=%s", request, response, retry)
-                retry = retry.increment()
-                retry.sleep(response)
+                retry = self._retry_increment(request, response, retry)
             try:
                 response = send_method(request)
             except Exception as e:
@@ -148,6 +138,19 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
+
+    def _retry_increment(self, request: httpx.Request, response: httpx.Response | Exception, retry: Retry) -> Retry:
+        time_to_sleep = retry.calculate_sleep(response)
+        logger.debug(
+            "retry request=%s response=%s retry=%s sleep=%s",
+            request,
+            response,
+            retry,
+            time_to_sleep,
+        )
+        retry = retry.increment()
+        retry.sleep(time_to_sleep)
+        return retry
 
     async def _retry_operation_async(
         self,
@@ -162,11 +165,7 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 if isinstance(response, httpx.Response):
                     await response.aclose()
 
-                logger.debug(
-                    "_retry_operation_async retrying request=%s response=%s retry=%s", request, response, retry
-                )
-                retry = retry.increment()
-                await retry.asleep(response)
+                retry = await self._retry_increment_async(request, response, retry)
             try:
                 response = await send_method(request)
             except Exception as e:
@@ -178,3 +177,18 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
             if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
                 return response
+
+    async def _retry_increment_async(
+        self, request: httpx.Request, response: httpx.Response | Exception, retry: Retry
+    ) -> Retry:
+        time_to_sleep = retry.calculate_sleep(response)
+        logger.debug(
+            "retry request=%s response=%s retry=%s sleep=%s",
+            request,
+            response,
+            retry,
+            time_to_sleep,
+        )
+        retry = retry.increment()
+        await retry.asleep(time_to_sleep)
+        return retry
