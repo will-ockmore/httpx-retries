@@ -1,6 +1,8 @@
 import datetime
+import inspect
 import logging
 from http import HTTPStatus
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -584,3 +586,33 @@ def test_copy_with_preserves_subclass() -> None:
     retry = CustomRetry(total=5)
     copy = retry.copy_with(total=3)
     assert type(copy) is CustomRetry
+
+
+def test_copy_with_and_init_have_same_parameters() -> None:
+    init_params = set(inspect.signature(Retry.__init__).parameters) - {"self"}
+    copy_with_params = set(inspect.signature(Retry.copy_with).parameters) - {"self"}
+    assert init_params == copy_with_params
+
+
+def test_copy_with_roundtrips_all_fields() -> None:
+    init_params = set(inspect.signature(Retry.__init__).parameters) - {"self"}
+    kwargs: dict[str, Any] = {
+        "total": 3,
+        "allowed_methods": {"GET", "POST"},
+        "status_forcelist": {500, 503},
+        "retry_on_exceptions": [httpx.TimeoutException],
+        "backoff_factor": 0.5,
+        "respect_retry_after_header": False,
+        "max_backoff_wait": 60.0,
+        "backoff_jitter": 0.5,
+        "attempts_made": 2,
+        "total_timeout": 30.0,
+        "elapsed_sleep": 1.5,
+    }
+    assert set(kwargs) == init_params
+
+    original = Retry(**kwargs)
+    copy = original.copy_with(**kwargs)
+
+    for attr, value in vars(original).items():
+        assert getattr(copy, attr) == value, f"{attr} mismatch"
