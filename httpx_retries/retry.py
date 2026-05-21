@@ -4,7 +4,7 @@ import logging
 import random
 import sys
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from email.utils import parsedate_to_datetime
 from enum import Enum
 from http import HTTPStatus
@@ -69,6 +69,10 @@ class Retry:
             repeatedly. Defaults to None (no cumulative cap).
         elapsed_sleep (float, optional): Cumulative sleep time already spent on this request. Preserved across
             `increment()` calls; users typically do not set this directly.
+        validate_response (callable, optional): An optional callback called with each response that would
+            otherwise be returned as a "good" (non-retryable-status) response. If the callback raises, the
+            request is retried. May be sync or async; an async callback cannot be used with a sync transport.
+            Signature: ``(response: httpx.Response) -> None``.
     """
 
     RETRYABLE_METHODS: Final[frozenset[HTTPMethod]] = frozenset(
@@ -108,6 +112,7 @@ class Retry:
         attempts_made: int = 0,
         total_timeout: float | None = None,
         elapsed_sleep: float = 0.0,
+        validate_response: Callable[[httpx.Response], None | Awaitable[None]] | None = None,
     ) -> None:
         """Initialize a new Retry instance."""
         if total < 0:
@@ -133,6 +138,7 @@ class Retry:
         self.attempts_made = attempts_made
         self.total_timeout = total_timeout
         self.elapsed_sleep = elapsed_sleep
+        self.validate_response = validate_response
 
         self.allowed_methods: frozenset[str] = frozenset(
             method.upper() for method in (allowed_methods or self.RETRYABLE_METHODS)
@@ -297,6 +303,7 @@ class Retry:
         attempts_made: int | _UnsetType = _UNSET,
         total_timeout: float | None | _UnsetType = _UNSET,
         elapsed_sleep: float | _UnsetType = _UNSET,
+        validate_response: Callable[[httpx.Response], None | Awaitable[None]] | None | _UnsetType = _UNSET,
     ) -> "Retry":
         """Return a new Retry with selected fields overridden."""
         return self.__class__(
@@ -315,6 +322,9 @@ class Retry:
             attempts_made=self.attempts_made if isinstance(attempts_made, _UnsetType) else attempts_made,
             total_timeout=self.total_timeout if isinstance(total_timeout, _UnsetType) else total_timeout,
             elapsed_sleep=self.elapsed_sleep if isinstance(elapsed_sleep, _UnsetType) else elapsed_sleep,
+            validate_response=self.validate_response
+            if isinstance(validate_response, _UnsetType)
+            else validate_response,
         )
 
     def increment(self) -> "Retry":

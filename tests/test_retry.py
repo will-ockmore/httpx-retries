@@ -608,6 +608,7 @@ def test_copy_with_roundtrips_all_fields() -> None:
         "attempts_made": 2,
         "total_timeout": 30.0,
         "elapsed_sleep": 1.5,
+        "validate_response": lambda _: None,
     }
     assert set(kwargs) == init_params
 

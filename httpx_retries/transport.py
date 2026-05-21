@@ -1,3 +1,4 @@
+import inspect
 import logging
 from collections.abc import Callable, Coroutine
 from functools import partial
@@ -90,6 +91,9 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         retry: Retry = request.extensions.setdefault("retry", self.retry)
 
         if retry.is_retryable_method(request.method):
+            if retry.validate_response is not None and inspect.iscoroutinefunction(retry.validate_response):
+                raise TypeError("validate_response must be a sync function when using a sync transport")
+
             send_method = partial(self._sync_transport.handle_request)
             response = self._retry_operation(request, send_method, retry)
         else:
@@ -150,7 +154,20 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+            if retry.is_exhausted():
+                response.extensions["retry"] = retry
+                return response
+
+            if not retry.is_retryable_status_code(response.status_code):
+                if retry.validate_response is not None:
+                    # normally set by httpx _after_ calling this function, but we want the request in the validator
+                    response.request = request
+                    try:
+                        retry.validate_response(response)
+                    except Exception as e:
+                        if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                            raise
+                        continue
                 response.extensions["retry"] = retry
                 return response
 
@@ -181,6 +198,22 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 response = e
                 continue
 
-            if retry.is_exhausted() or not retry.is_retryable_status_code(response.status_code):
+            if retry.is_exhausted():
+                response.extensions["retry"] = retry
+                return response
+
+            if not retry.is_retryable_status_code(response.status_code):
+                if retry.validate_response is not None:
+                    # normally set by httpx _after_ calling this function, but we want the request in the validator
+                    response.request = request
+                    try:
+                        if inspect.iscoroutinefunction(retry.validate_response):
+                            await retry.validate_response(response)
+                        else:
+                            retry.validate_response(response)
+                    except Exception as e:
+                        if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                            raise
+                        continue
                 response.extensions["retry"] = retry
                 return response
