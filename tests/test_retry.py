@@ -1,6 +1,8 @@
 import datetime
+import inspect
 import logging
 from http import HTTPStatus
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -550,3 +552,68 @@ def test_is_exhausted_below_total_timeout() -> None:
     retry = Retry(total=10, total_timeout=5)
     retry.elapsed_sleep = 4.9
     assert retry.is_exhausted() is False
+
+
+def test_copy_with_overrides_fields() -> None:
+    retry = Retry(total=10, backoff_factor=0.5, total_timeout=30.0)
+    copy = retry.copy_with(total=3, backoff_factor=1.0)
+    assert copy.total == 3
+    assert copy.backoff_factor == 1.0
+    assert copy.total_timeout == 30.0  # unchanged
+
+
+def test_copy_with_no_args_equals_original() -> None:
+    retry = Retry(total=5, backoff_factor=0.2, max_backoff_wait=60.0)
+    copy = retry.copy_with()
+    assert copy.total == retry.total
+    assert copy.backoff_factor == retry.backoff_factor
+    assert copy.max_backoff_wait == retry.max_backoff_wait
+    assert copy.allowed_methods == retry.allowed_methods
+    assert copy.status_forcelist == retry.status_forcelist
+    assert copy.retryable_exceptions == retry.retryable_exceptions
+
+
+def test_copy_with_can_set_total_timeout_to_none() -> None:
+    retry = Retry(total=5, total_timeout=10.0)
+    copy = retry.copy_with(total_timeout=None)
+    assert copy.total_timeout is None
+
+
+def test_copy_with_preserves_subclass() -> None:
+    class CustomRetry(Retry):
+        pass
+
+    retry = CustomRetry(total=5)
+    copy = retry.copy_with(total=3)
+    assert type(copy) is CustomRetry
+
+
+def test_copy_with_and_init_have_same_parameters() -> None:
+    init_params = set(inspect.signature(Retry.__init__).parameters) - {"self"}
+    copy_with_params = set(inspect.signature(Retry.copy_with).parameters) - {"self"}
+    assert init_params == copy_with_params
+
+
+def test_copy_with_roundtrips_all_fields() -> None:
+    init_params = set(inspect.signature(Retry.__init__).parameters) - {"self"}
+    kwargs: dict[str, Any] = {
+        "total": 3,
+        "allowed_methods": {"GET", "POST"},
+        "status_forcelist": {500, 503},
+        "retry_on_exceptions": [httpx.TimeoutException],
+        "backoff_factor": 0.5,
+        "respect_retry_after_header": False,
+        "max_backoff_wait": 60.0,
+        "backoff_jitter": 0.5,
+        "attempts_made": 2,
+        "total_timeout": 30.0,
+        "elapsed_sleep": 1.5,
+        "validate_response": lambda _: None,
+    }
+    assert set(kwargs) == init_params
+
+    original = Retry(**kwargs)
+    copy = original.copy_with(**kwargs)
+
+    for attr, value in vars(original).items():
+        assert getattr(copy, attr) == value, f"{attr} mismatch"

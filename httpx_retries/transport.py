@@ -88,9 +88,14 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         logger.debug("handle_request started request=%s", request)
 
-        if self.retry.is_retryable_method(request.method):
+        retry: Retry = request.extensions.setdefault("retry", self.retry)
+
+        if retry.is_retryable_method(request.method):
+            if retry.validate_response is not None and inspect.iscoroutinefunction(retry.validate_response):
+                raise TypeError("validate_response must be a sync function when using a sync transport")
+
             send_method = partial(self._sync_transport.handle_request)
-            response = self._retry_operation(request, send_method)
+            response = self._retry_operation(request, send_method, retry)
         else:
             response = self._sync_transport.handle_request(request)
 
@@ -112,9 +117,11 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
 
         logger.debug("handle_async_request started request=%s", request)
 
-        if self.retry.is_retryable_method(request.method):
+        retry: Retry = request.extensions.setdefault("retry", self.retry)
+
+        if retry.is_retryable_method(request.method):
             send_method = partial(self._async_transport.handle_async_request)
-            response = await self._retry_operation_async(request, send_method)
+            response = await self._retry_operation_async(request, send_method, retry)
         else:
             response = await self._async_transport.handle_async_request(request)
 
@@ -126,11 +133,8 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
         self,
         request: httpx.Request,
         send_method: Callable[..., httpx.Response],
+        retry: Retry,
     ) -> httpx.Response:
-        if self.retry.validate_response is not None and inspect.iscoroutinefunction(self.retry.validate_response):
-            raise TypeError("validate_response must be a sync function when using a sync transport")
-
-        retry = self.retry
         response: httpx.Response | Exception | None = None
 
         while True:
@@ -151,26 +155,28 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 continue
 
             if retry.is_exhausted():
+                response.extensions["retry"] = retry
                 return response
 
             if not retry.is_retryable_status_code(response.status_code):
-                if self.retry.validate_response is not None:
+                if retry.validate_response is not None:
                     # normally set by httpx _after_ calling this function, but we want the request in the validator
                     response.request = request
                     try:
-                        self.retry.validate_response(response)
+                        retry.validate_response(response)
                     except Exception as e:
                         if retry.is_exhausted() or not retry.is_retryable_exception(e):
                             raise
                         continue
+                response.extensions["retry"] = retry
                 return response
 
     async def _retry_operation_async(
         self,
         request: httpx.Request,
         send_method: Callable[..., Coroutine[Any, Any, httpx.Response]],
+        retry: Retry,
     ) -> httpx.Response:
-        retry = self.retry
         response: httpx.Response | Exception | None = None
 
         while True:
@@ -193,19 +199,21 @@ class RetryTransport(httpx.BaseTransport, httpx.AsyncBaseTransport):
                 continue
 
             if retry.is_exhausted():
+                response.extensions["retry"] = retry
                 return response
 
             if not retry.is_retryable_status_code(response.status_code):
-                if self.retry.validate_response is not None:
+                if retry.validate_response is not None:
                     # normally set by httpx _after_ calling this function, but we want the request in the validator
                     response.request = request
                     try:
-                        if inspect.iscoroutinefunction(self.retry.validate_response):
-                            await self.retry.validate_response(response)
+                        if inspect.iscoroutinefunction(retry.validate_response):
+                            await retry.validate_response(response)
                         else:
-                            self.retry.validate_response(response)
+                            retry.validate_response(response)
                     except Exception as e:
                         if retry.is_exhausted() or not retry.is_retryable_exception(e):
                             raise
                         continue
+                response.extensions["retry"] = retry
                 return response
