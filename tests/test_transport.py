@@ -9,6 +9,7 @@ import pytest
 from httpx import Request, Response
 
 from httpx_retries import Retry, RetryTransport
+from httpx_retries.transport import _retry_operation, _retry_operation_async
 
 
 def status_codes(
@@ -252,8 +253,6 @@ def test_retryable_exception_custom_exception(mock_responses: MockResponse) -> N
 
 @pytest.mark.parametrize("status_code", Retry.RETRYABLE_STATUS_CODES)
 def test_retry_operation_always_closes_response(status_code: int) -> None:
-    transport = RetryTransport()
-
     responses = []
 
     def send_method(request: httpx.Request) -> httpx.Response:
@@ -266,9 +265,7 @@ def test_retry_operation_always_closes_response(status_code: int) -> None:
         responses.append(response)
         return response
 
-    transport._retry_operation(
-        request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry
-    )
+    _retry_operation(request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=Retry())
 
     assert all(r.close.called for r in responses[:-1])
 
@@ -615,8 +612,6 @@ async def test_async_retry_after_capped_by_total_timeout(
 @pytest.mark.parametrize("status_code", Retry.RETRYABLE_STATUS_CODES)
 @pytest.mark.asyncio
 async def test_retry_operation_async_always_closes_response(status_code: int) -> None:
-    transport = RetryTransport()
-
     responses = []
 
     async def send_method(request: httpx.Request) -> httpx.Response:
@@ -629,8 +624,8 @@ async def test_retry_operation_async_always_closes_response(status_code: int) ->
         responses.append(response)
         return response
 
-    await transport._retry_operation_async(
-        request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=transport.retry
+    await _retry_operation_async(
+        request=httpx.Request("GET", "https://example.com"), send_method=send_method, retry=Retry()
     )
 
     assert all(r.aclose.called for r in responses[:-1])

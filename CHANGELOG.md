@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `retry_request` and `aretry_request` helpers, which run the retry loop at the client level so that errors raised while reading the response body (such as `ReadTimeout` and `RemoteProtocolError`) are retried. This is something `RetryTransport` cannot do, as transports return before the body is read. They reject a client that already uses `RetryTransport` to avoid retrying every request twice.
+- `validate_response` option on `Retry` to retry when a callback rejects an otherwise-successful response (for example, content-level blocks such as a CAPTCHA or authorization wall).
+- `request.extensions["retry"]` support, allowing the `Retry` configuration to be overridden per request; the resolved `Retry` is also attached to `response.extensions["retry"]` for introspection.
+- `Retry.copy_with` to derive a modified `Retry` (mirroring `httpx.URL.copy_with`), convenient for per-request overrides via `request.extensions["retry"]`.
+
 ## [0.5.0] - 2026-04-20
 
 ### Added
