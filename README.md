@@ -69,9 +69,9 @@ with httpx.Client(transport=transport) as client:
 ```
 
 > **Errors while reading the response body** (such as `ReadTimeout` part-way through a download) happen
-> after the transport has returned, so `RetryTransport` can't retry them. If you need those retried, use the
-> `retry_request` / `aretry_request` helpers — see
-> [Why wasn't my `ReadTimeout` retried?](https://will-ockmore.github.io/httpx-retries/faq/#why-wasnt-my-readtimeout-retried) in the FAQ.
+> after the transport has returned, so `RetryTransport` can't retry them. This is a niche case,
+> but if you read large or slow bodies and need those retried, see the `retry_request` / `aretry_request` helpers in
+> [Why wasn't my `ReadTimeout` retried?](https://will-ockmore.github.io/httpx-retries/faq/#why-wasnt-my-readtimeout-retried).
 
 ## Features
 

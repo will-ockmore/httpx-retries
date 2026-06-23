@@ -54,7 +54,11 @@ def retry_request(
     ```
 
     This helper buffers the full response body, so it is not suitable for streaming. Errors raised while
-    iterating a streaming response (`client.stream(...)`) cannot be retried; see the FAQ for details.
+    iterating a streaming response (`client.stream(...)`) cannot be retried.
+
+    Body-phase errors are a niche case; see
+    [Why wasn't my `ReadTimeout` retried?](faq.md#why-wasnt-my-readtimeout-retried) for when these helpers are
+    worth using and when to prefer [RetryTransport][httpx_retries.RetryTransport] instead.
 
     Args:
         client: The client used to build and send the request.
@@ -103,7 +107,9 @@ async def aretry_request(
     """
     Send a request asynchronously with retries, including errors raised while reading the response body.
 
-    This is the async counterpart to [retry_request][httpx_retries.retry_request].
+    This is the async counterpart to [retry_request][httpx_retries.retry_request]. Body-phase errors are a niche
+    case; see [Why wasn't my `ReadTimeout` retried?](faq.md#why-wasnt-my-readtimeout-retried) for when these
+    helpers are worth using and when to prefer [RetryTransport][httpx_retries.RetryTransport] instead.
 
     ```python
     import httpx

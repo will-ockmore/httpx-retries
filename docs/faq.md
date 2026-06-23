@@ -59,6 +59,9 @@ Not retried by [RetryTransport][httpx_retries.RetryTransport]:
 
 - Any exception raised during `response.read()`, `response.aread()`, or iteration of a streaming response — including `ReadTimeout` mid-body and `RemoteProtocolError("peer closed connection...")`.
 
+!!! tip "Most requests don't need this! Keep using `RetryTransport`"
+    A body-phase error can only occur while the body is in transit, so for the small responses typical of most API traffic that window is tiny and almost every failure is already caught by [RetryTransport][httpx_retries.RetryTransport] at the header or status-code stage. The helpers below earn their keep in a narrower set of cases: reading **large or slow, non-streamed** bodies — big exports and downloads, or payloads proxied from a flaky origin — where a mid-body `ReadTimeout` or a truncated `RemoteProtocolError` is more likely. For ordinary requests, prefer [RetryTransport][httpx_retries.RetryTransport] for simplicity.
+
 To retry body-phase errors, use [retry_request][httpx_retries.retry_request] (or its async counterpart [aretry_request][httpx_retries.aretry_request]). These helpers drive the retry loop at the *client* level, where the body is read, so the same [Retry][httpx_retries.Retry] configuration covers body-phase errors as well as the header-phase errors and retryable status codes that [RetryTransport][httpx_retries.RetryTransport] already handles:
 
 ```python
