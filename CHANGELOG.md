@@ -121,7 +121,7 @@ from `httpx.BaseTransport` and `httpx.AsyncBaseTransport`.
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/will-ockmore/httpx-retries/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/will-ockmore/httpx-retries/compare/0.5.0...HEAD
 [0.3.0]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.3.0
 [0.2.4]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.2.4
 [0.2.3]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.2.3

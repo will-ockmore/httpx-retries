@@ -1,13 +1,13 @@
 import inspect
-from functools import partial
 from typing import Any
 
 import httpx
-from httpx._client import USE_CLIENT_DEFAULT, UseClientDefault
-from httpx._types import AuthTypes
 
 from .retry import Retry
 from .transport import RetryTransport, _retry_operation, _retry_operation_async
+
+# Arguments accepted by `Client.send` rather than `Client.build_request`; forwarded to send if provided.
+_SEND_KWARGS = ("auth", "follow_redirects")
 
 
 def _client_retries(client: httpx.Client | httpx.AsyncClient) -> bool:
@@ -27,8 +27,6 @@ def retry_request(
     url: httpx.URL | str,
     *,
     retry: Retry | None = None,
-    auth: AuthTypes | UseClientDefault | None = USE_CLIENT_DEFAULT,
-    follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
     **kwargs: Any,
 ) -> httpx.Response:
     """
@@ -65,11 +63,8 @@ def retry_request(
         method: The HTTP method.
         url: The URL to request.
         retry: The retry configuration. A per-request `request.extensions["retry"]` takes precedence.
-        auth: Authentication to use, forwarded to `client.send`. Defaults to the client's configuration.
-        follow_redirects: Whether to follow redirects, forwarded to `client.send`. Defaults to the client's
-            configuration.
-        **kwargs: Additional arguments passed to `client.build_request` (for example `params`, `headers`,
-            `json`, `content`).
+        **kwargs: Additional arguments. `auth` and `follow_redirects` are forwarded to `client.send`; all others
+            (for example `params`, `headers`, `json`, `content`) are passed to `client.build_request`.
 
     Returns:
         The final response.
@@ -81,9 +76,12 @@ def retry_request(
             "httpx.Client instead; retry_request already retries header-phase errors and retryable status codes."
         )
 
+    send_kwargs = {key: kwargs.pop(key) for key in _SEND_KWARGS if key in kwargs}
     request = client.build_request(method, url, **kwargs)
     retry = request.extensions.setdefault("retry", retry or Retry())
-    send = partial(client.send, auth=auth, follow_redirects=follow_redirects)
+
+    def send(request: httpx.Request) -> httpx.Response:
+        return client.send(request, **send_kwargs)
 
     if not retry.is_retryable_method(request.method):
         return send(request)
@@ -100,8 +98,6 @@ async def aretry_request(
     url: httpx.URL | str,
     *,
     retry: Retry | None = None,
-    auth: AuthTypes | UseClientDefault | None = USE_CLIENT_DEFAULT,
-    follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
     **kwargs: Any,
 ) -> httpx.Response:
     """
@@ -124,11 +120,8 @@ async def aretry_request(
         method: The HTTP method.
         url: The URL to request.
         retry: The retry configuration. A per-request `request.extensions["retry"]` takes precedence.
-        auth: Authentication to use, forwarded to `client.send`. Defaults to the client's configuration.
-        follow_redirects: Whether to follow redirects, forwarded to `client.send`. Defaults to the client's
-            configuration.
-        **kwargs: Additional arguments passed to `client.build_request` (for example `params`, `headers`,
-            `json`, `content`).
+        **kwargs: Additional arguments. `auth` and `follow_redirects` are forwarded to `client.send`; all others
+            (for example `params`, `headers`, `json`, `content`) are passed to `client.build_request`.
 
     Returns:
         The final response.
@@ -141,9 +134,12 @@ async def aretry_request(
             "codes."
         )
 
+    send_kwargs = {key: kwargs.pop(key) for key in _SEND_KWARGS if key in kwargs}
     request = client.build_request(method, url, **kwargs)
     retry = request.extensions.setdefault("retry", retry or Retry())
-    send = partial(client.send, auth=auth, follow_redirects=follow_redirects)
+
+    async def send(request: httpx.Request) -> httpx.Response:
+        return await client.send(request, **send_kwargs)
 
     if not retry.is_retryable_method(request.method):
         return await send(request)

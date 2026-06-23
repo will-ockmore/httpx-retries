@@ -133,8 +133,16 @@ def test_retry_request_success(mock_sleep: MagicMock) -> None:
     assert response.extensions["retry"].attempts_made == 0
 
 
-def test_retry_request_retries_body_read_error(mock_sleep: MagicMock) -> None:
-    transport = BodyFailTransport(httpx.ReadTimeout("boom"), fail_times=2)
+# Both are in the default retryable set and are the two headline body-phase failures.
+BODY_READ_ERRORS = [
+    httpx.ReadTimeout("read timed out"),
+    httpx.RemoteProtocolError("peer closed connection without sending complete message body"),
+]
+
+
+@pytest.mark.parametrize("exc", BODY_READ_ERRORS)
+def test_retry_request_retries_body_read_error(mock_sleep: MagicMock, exc: Exception) -> None:
+    transport = BodyFailTransport(exc, fail_times=2)
 
     with httpx.Client(transport=transport) as client:
         response = retry_request(client, "GET", "https://example.com")
@@ -208,9 +216,10 @@ async def test_aretry_request_success(mock_asleep: AsyncMock) -> None:
     assert mock_asleep.call_count == 0
 
 
+@pytest.mark.parametrize("exc", BODY_READ_ERRORS)
 @pytest.mark.asyncio
-async def test_aretry_request_retries_body_read_error(mock_asleep: AsyncMock) -> None:
-    transport = AsyncBodyFailTransport(httpx.ReadTimeout("boom"), fail_times=2)
+async def test_aretry_request_retries_body_read_error(mock_asleep: AsyncMock, exc: Exception) -> None:
+    transport = AsyncBodyFailTransport(exc, fail_times=2)
 
     async with httpx.AsyncClient(transport=transport) as client:
         response = await aretry_request(client, "GET", "https://example.com")
@@ -300,3 +309,30 @@ async def test_aretry_request_rejects_retrying_client() -> None:
     async with httpx.AsyncClient(transport=RetryTransport(transport=AsyncRecordingTransport())) as client:
         with pytest.raises(ValueError, match="would retry every request twice"):
             await aretry_request(client, "GET", "https://example.com")
+
+
+@pytest.mark.asyncio
+async def test_aretry_request_rejects_mounted_retrying_transport() -> None:
+    mounts = {"https://": RetryTransport(transport=AsyncRecordingTransport())}
+    async with httpx.AsyncClient(mounts=mounts, trust_env=False) as client:
+        with pytest.raises(ValueError, match="would retry every request twice"):
+            await aretry_request(client, "GET", "https://example.com")
+
+
+def test_retry_request_validate_response_retries(mock_sleep: MagicMock) -> None:
+    transport = RecordingTransport()
+    statuses: list[int] = []
+
+    def validate(response: httpx.Response) -> None:
+        statuses.append(response.status_code)
+        if len(statuses) < 3:
+            raise httpx.TimeoutException("not ready yet")
+
+    retry = Retry(total=5, validate_response=validate)
+
+    with httpx.Client(transport=transport) as client:
+        response = retry_request(client, "GET", "https://example.com", retry=retry)
+
+    assert response.status_code == 200
+    assert statuses == [200, 200, 200]
+    assert mock_sleep.call_count == 2
