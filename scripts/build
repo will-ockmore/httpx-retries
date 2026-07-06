@@ -3,4 +3,4 @@
 set -euo pipefail
 
 uv build --no-sources
-uv run mkdocs build
+uv run zensical build --clean --strict
