@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-06
+
 ### Added
 - `retry_request` and `aretry_request` helpers, which run the retry loop at the client level so that errors raised while reading the response body (such as `ReadTimeout` and `RemoteProtocolError`) are retried. This is something `RetryTransport` cannot do, as transports return before the body is read. They reject a client that already uses `RetryTransport` to avoid retrying every request twice.
 - `validate_response` option on `Retry` to retry when a callback rejects an otherwise-successful response (for example, content-level blocks such as a CAPTCHA or authorization wall).
@@ -121,7 +123,9 @@ from `httpx.BaseTransport` and `httpx.AsyncBaseTransport`.
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/will-ockmore/httpx-retries/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/will-ockmore/httpx-retries/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/will-ockmore/httpx-retries/compare/0.5.0...0.6.0
+[0.5.0]: https://github.com/will-ockmore/httpx-retries/compare/0.4.6...0.5.0
 [0.3.0]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.3.0
 [0.2.4]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.2.4
 [0.2.3]: https://github.com/will-ockmore/httpx-retries/releases/tag/0.2.3
