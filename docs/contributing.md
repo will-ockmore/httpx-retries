@@ -54,10 +54,10 @@ This runs:
 
 ## Documentation
 
-Documentation is built using MkDocs. To preview locally:
+Documentation is built using [Zensical](https://zensical.org). To preview locally:
 
 ```shell
-mkdocs serve
+zensical serve
 ```
 
 Then visit `http://127.0.0.1:8000` in your browser.

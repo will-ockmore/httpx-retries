@@ -1,0 +1,71 @@
+[project]
+site_name = "HTTPX Retries"
+site_description = "A retry layer for HTTPX."
+site_url = "https://will-ockmore.github.io/httpx-retries/"
+repo_url = "https://github.com/will-ockmore/httpx-retries"
+repo_name = "will-ockmore/httpx-retries"
+
+extra_css = ["stylesheets/extra.css"]
+
+nav = [
+  { Home = "index.md" },
+  { Guides = [
+    { "Retry Behaviour" = "behaviour.md" },
+    { Logging = "logging.md" },
+    { "Differences With Other Retry Libraries" = "differences_with_other_retry_libraries.md" },
+  ] },
+  { FAQs = "faq.md" },
+  { API = "api.md" },
+  { Contributing = "contributing.md" },
+]
+
+# Auto-generate the API reference from docstrings. mkdocstrings enables
+# autorefs itself, so cross-references keep working.
+[project.plugins.mkdocstrings]
+
+# ----------------------------------------------------------------------------
+# Theme
+# ----------------------------------------------------------------------------
+[project.theme]
+features = [
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "deep purple"
+accent = "deep purple"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "deep purple"
+accent = "deep purple"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+# ----------------------------------------------------------------------------
+# Markdown extensions
+# ----------------------------------------------------------------------------
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+[project.markdown_extensions.pymdownx.inlinehilite]

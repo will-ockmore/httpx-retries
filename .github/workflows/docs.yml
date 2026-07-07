@@ -1,0 +1,70 @@
+name: Documentation
+
+# Deploy the docs only after a successful release (the "Publish" workflow,
+# which runs on version tags and publishes to PyPI). Also allow manual runs.
+on:
+  workflow_run:
+    workflows: ["Publish"]
+    types: ["completed"]
+  workflow_dispatch:
+
+# Allow the GITHUB_TOKEN to deploy to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment, without cancelling in-progress runs so a
+# deploy is always allowed to finish.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Build & deploy docs"
+    runs-on: "ubuntu-latest"
+
+    # For workflow_run, only proceed when the triggering release succeeded.
+    # Manual runs (workflow_dispatch) are always allowed.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Build the exact commit that was released. workflow_run defaults to
+          # the default branch, which may have advanced past the release tag.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.10"
+          version: "0.11.7"
+
+      - name: "Install dependencies"
+        run: uv sync --all-extras --dev
+
+      - name: "Build docs"
+        run: uv run zensical build --clean --strict
+
+      - name: "Configure GitHub Pages"
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          enablement: true
+
+      - name: "Upload Pages artifact"
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+      - name: "Deploy to GitHub Pages"
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

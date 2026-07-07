@@ -15,6 +15,9 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
 fi
 
 uv publish
-uv run mkdocs gh-deploy --force
+
+# Documentation is published separately by .github/workflows/docs.yml, which
+# builds the site with Zensical and deploys it to GitHub Pages via the Pages
+# deployment actions on every push to main.
 
 echo "Done! 🎉"
