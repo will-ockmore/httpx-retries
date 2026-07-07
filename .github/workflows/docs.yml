@@ -1,10 +1,11 @@
 name: Documentation
 
+# Deploy the docs only after a successful release (the "Publish" workflow,
+# which runs on version tags and publishes to PyPI). Also allow manual runs.
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+[a-z]*[0-9]*"
+  workflow_run:
+    workflows: ["Publish"]
+    types: ["completed"]
   workflow_dispatch:
 
 # Allow the GITHUB_TOKEN to deploy to GitHub Pages.
@@ -24,12 +25,20 @@ jobs:
     name: "Build & deploy docs"
     runs-on: "ubuntu-latest"
 
+    # For workflow_run, only proceed when the triggering release succeeded.
+    # Manual runs (workflow_dispatch) are always allowed.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Build the exact commit that was released. workflow_run defaults to
+          # the default branch, which may have advanced past the release tag.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.10"
