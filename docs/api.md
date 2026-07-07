@@ -1,3 +1,7 @@
+---
+title: API
+---
+
 ::: httpx_retries
     options:
         members:

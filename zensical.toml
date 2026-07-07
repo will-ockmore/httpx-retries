@@ -5,6 +5,8 @@ site_url = "https://will-ockmore.github.io/httpx-retries/"
 repo_url = "https://github.com/will-ockmore/httpx-retries"
 repo_name = "will-ockmore/httpx-retries"
 
+extra_css = ["stylesheets/extra.css"]
+
 nav = [
   { Home = "index.md" },
   { Guides = [

@@ -1,0 +1,5 @@
+/* Links that wrap an image (e.g. the badge row on the home page) shouldn't
+   get the body-link underline. */
+.md-typeset a:has(> img) {
+  text-decoration: none;
+}
