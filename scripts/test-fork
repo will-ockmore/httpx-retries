@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# Run the test suite against a community httpx fork (httpxyz or httpx2) to prove
+# httpx-retries stays compatible. The fork must already be installed in .venv
+# (e.g. `uv pip install httpxyz`). See scripts/fork-compat/sitecustomize.py.
+
+set -euo pipefail
+
+: "${HTTPX_BACKEND:?set HTTPX_BACKEND to httpxyz or httpx2}"
+
+source .venv/bin/activate
+
+# Put the sitecustomize shim on PYTHONPATH so `import httpx` resolves to the fork.
+export PYTHONPATH="$(pwd)/scripts/fork-compat${PYTHONPATH:+:$PYTHONPATH}"
+
+# Fail fast with a clear message if the shim didn't take effect.
+python -c "import httpx, ${HTTPX_BACKEND} as fork; assert httpx is fork, f'shim inactive: httpx is {httpx.__name__}'; print(f'httpx -> {httpx.__name__} {getattr(httpx, \"__version__\", \"?\")}')"
+
+pytest
