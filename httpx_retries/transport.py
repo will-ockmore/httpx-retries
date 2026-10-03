@@ -45,8 +45,9 @@ def _retry_operation(
                 response.request = request
                 try:
                     retry.validate_response(response)
-                except Exception as e:
-                    if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                except BaseException as e:
+                    if not isinstance(e, Exception) or retry.is_exhausted() or not retry.is_retryable_exception(e):
+                        response.close()
                         raise
                     continue
             response.extensions["retry"] = retry
@@ -90,8 +91,9 @@ async def _retry_operation_async(
                         await retry.validate_response(response)
                     else:
                         retry.validate_response(response)
-                except Exception as e:
-                    if retry.is_exhausted() or not retry.is_retryable_exception(e):
+                except BaseException as e:
+                    if not isinstance(e, Exception) or retry.is_exhausted() or not retry.is_retryable_exception(e):
+                        await response.aclose()
                         raise
                     continue
             response.extensions["retry"] = retry
