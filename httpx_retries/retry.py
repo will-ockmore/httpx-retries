@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import logging
 import random
@@ -10,6 +9,7 @@ from enum import Enum
 from http import HTTPStatus
 from typing import Final
 
+import anyio
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -287,7 +287,7 @@ class Retry:
         """
         time_to_sleep = self._calculate_sleep(response.headers if isinstance(response, httpx.Response) else {})
         logger.debug("asleep seconds=%s", time_to_sleep)
-        await asyncio.sleep(time_to_sleep)
+        await anyio.sleep(time_to_sleep)
         self.elapsed_sleep += time_to_sleep
 
     def copy_with(
