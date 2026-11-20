@@ -1,4 +1,5 @@
-from collections.abc import AsyncIterator, Generator, Iterator
+import asyncio
+from collections.abc import AsyncIterator, Awaitable, Callable, Generator, Iterator
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -202,6 +203,63 @@ def test_retry_request_async_validate_response_raises_for_sync_client() -> None:
     with httpx.Client(transport=transport) as client:
         with pytest.raises(TypeError, match="validate_response must be a sync function"):
             retry_request(client, "GET", "https://example.com", retry=retry)
+
+
+def test_retry_request_awaitable_validator_result_raises_for_sync_client(
+    mock_sleep: MagicMock,
+    wrap_async_validator: Callable[
+        [Callable[[httpx.Response], Awaitable[None]]], Callable[[httpx.Response], Awaitable[None]]
+    ],
+) -> None:
+    validate = AsyncMock()
+    transport = RecordingTransport()
+    retry = Retry(total=3, validate_response=wrap_async_validator(validate), retry_on_exceptions=[TypeError])
+
+    with httpx.Client(transport=transport) as client:
+        with pytest.raises(TypeError, match="validate_response must be a sync function"):
+            retry_request(client, "GET", "https://example.com", retry=retry)
+
+    validate.assert_not_awaited()
+    assert len(transport.requests) == 1
+    assert mock_sleep.call_count == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("retryable", [False, True], ids=["terminal-error", "retry"])
+async def test_aretry_request_awaits_validator_result(
+    wrap_async_validator: Callable[
+        [Callable[[httpx.Response], Awaitable[None]]], Callable[[httpx.Response], Awaitable[None]]
+    ],
+    retryable: bool,
+) -> None:
+    requests = 0
+    validated: list[str] = []
+    error = httpx.ReadTimeout("result not ready") if retryable else ValueError("invalid result")
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        requests += 1
+        return httpx.Response(200, headers={"X-Result": "pending" if requests == 1 else "ready"})
+
+    async def validate(response: httpx.Response) -> None:
+        await asyncio.sleep(0)
+        assert response.request.url == "https://example.com/result"
+        validated.append(response.headers["X-Result"])
+        if response.headers["X-Result"] == "pending":
+            raise error
+
+    retry = Retry(total=2, validate_response=wrap_async_validator(validate))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        if retryable:
+            response = await aretry_request(client, "GET", "https://example.com/result", retry=retry)
+            assert response.headers["X-Result"] == "ready"
+        else:
+            with pytest.raises(ValueError, match="invalid result") as exc_info:
+                await aretry_request(client, "GET", "https://example.com/result", retry=retry)
+            assert exc_info.value is error
+
+    assert requests == (2 if retryable else 1)
+    assert validated == (["pending", "ready"] if retryable else ["pending"])
 
 
 @pytest.mark.asyncio

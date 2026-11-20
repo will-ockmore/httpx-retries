@@ -44,11 +44,15 @@ def _retry_operation(
                 # normally set by httpx _after_ calling this function, but we want the request in the validator
                 response.request = request
                 try:
-                    retry.validate_response(response)
+                    validation_result = retry.validate_response(response)
                 except Exception as e:
                     if retry.is_exhausted() or not retry.is_retryable_exception(e):
                         raise
                     continue
+                if inspect.isawaitable(validation_result):
+                    if inspect.iscoroutine(validation_result):
+                        validation_result.close()
+                    raise TypeError("validate_response must be a sync function when using a sync transport or client")
             response.extensions["retry"] = retry
             return response
 
@@ -86,10 +90,9 @@ async def _retry_operation_async(
                 # normally set by httpx _after_ calling this function, but we want the request in the validator
                 response.request = request
                 try:
-                    if inspect.iscoroutinefunction(retry.validate_response):
-                        await retry.validate_response(response)
-                    else:
-                        retry.validate_response(response)
+                    validation_result = retry.validate_response(response)
+                    if inspect.isawaitable(validation_result):
+                        await validation_result
                 except Exception as e:
                     if retry.is_exhausted() or not retry.is_retryable_exception(e):
                         raise

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support Trio during asynchronous retry sleeps, including backoff delays and cancellation ([#84](https://github.com/will-ockmore/httpx-retries/pull/84)).
 
+### Fixed
+- Await response validator results from async callable objects, coroutine-returning wrappers, and custom awaitables; reject these results in synchronous requests instead of silently skipping validation ([#85](https://github.com/will-ockmore/httpx-retries/pull/85)).
+
 ## [0.6.0] - 2026-07-06
 
 ### Added
