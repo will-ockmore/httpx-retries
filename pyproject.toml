@@ -8,7 +8,10 @@ version = "0.6.0"
 description = "A retry layer for HTTPX."
 requires-python = ">=3.10"
 authors = [{ name = "Will Ockmore", email = "will.ockmore@gmail.com" }]
-dependencies = ["httpx>=0.20.0"]
+dependencies = [
+    "anyio>=3.0",
+    "httpx>=0.20.0",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -45,6 +48,7 @@ dev = [
     "pygments",
     "coverage",
     "hatch-fancy-pypi-readme",
+    "trio>=0.35.0",
 ]
 
 [tool.hatch.build.targets.sdist]

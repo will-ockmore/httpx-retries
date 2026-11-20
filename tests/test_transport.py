@@ -633,7 +633,7 @@ async def test_retry_operation_async_always_closes_response(status_code: int) ->
 
 # a retry backoff on one coroutine must not block peer coroutines sharing the
 # event loop. These tests intentionally avoid the mock_asleep fixture because
-# mocking asyncio.sleep short-circuits the scheduler and defeats the check.
+# mocking sleep short-circuits the scheduler and defeats the check.
 
 
 @pytest.mark.asyncio

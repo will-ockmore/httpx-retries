@@ -13,5 +13,5 @@ def mock_sleep(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 @pytest.fixture
 def mock_asleep(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     mock_asleep = AsyncMock()
-    monkeypatch.setattr("asyncio.sleep", mock_asleep)
+    monkeypatch.setattr("anyio.sleep", mock_asleep)
     return mock_asleep
